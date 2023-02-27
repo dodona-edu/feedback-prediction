@@ -16,7 +16,7 @@
   outputs = { self, nixpkgs, devshell, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; overlays = [ devshell.overlay ]; };
+        pkgs = import nixpkgs { inherit system; overlays = [ devshell.overlays.default ]; };
         tree-sitter = pkgs.python3Packages.buildPythonPackage rec {
           pname = "tree_sitter";
           version = "0.20.0";
@@ -38,7 +38,7 @@
             imports = [ "${devshell}/extra/language/c.nix" ];
             packages = with pkgs; [
               nixpkgs-fmt
-              (python3.withPackages (ps: [ tree-sitter ps.pylint ps.tqdm ]))
+              (python3.withPackages (ps: [ tree-sitter ps.pylint ps.tqdm ps.python-lsp-server ]))
             ];
             language.c = {
               compiler = pkgs.gcc;
