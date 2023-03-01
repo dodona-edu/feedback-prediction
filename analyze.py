@@ -1,4 +1,3 @@
-#!/usr/bin/env -S python -i
 """
 Module for matching pylint comments to a syntax tree
 """
@@ -6,7 +5,7 @@ from io import StringIO
 import json
 from functools import reduce
 from glob import glob
-from freqt import treeminer, to_string_encoding
+from treeminer import Treeminer, to_string_encoding
 import pickle
 
 from pylint import lint
@@ -58,38 +57,22 @@ def paths_for_message(analysis, message):
         result += [x[2] for x in item if x[0] == message]
     return result
 
-def edit_distance(path1, path2):
-    dist = [[0] * (len(path2) + 1) for _ in range(len(path1) + 1)]
-    for i in range(1, len(path1) + 1):
-        dist[i][0] = i
-    for j in range(1, len(path2) + 1):
-        dist[0][j] = j
-
-    for j in range(len(path2)):
-        for i in range(len(path1)):
-            if path1[i] == path2[j]:
-                cost = 0
-            else:
-                cost = 1
-            dist[i + 1][j + 1] = min(dist[i][j + 1] + 1, dist[i + 1][j] + 1, dist[i][j] + cost)
-
-    return dist[len(path1)][len(path2)]
-    
+def split_with_message(trees, message):
+    result = [], []
+    for item in trees.values():
+        if any(x[0] == message for x in item[1]):
+            result[0].append(item[0])
+        else:
+            result[1].append(item[0])
+    return result
 
 if __name__ == '__main__':
-    # result = {}
-    # for filename in tqdm(glob('submissions/exam-group-1-examen-groep-1/*/*/*.py')):
+    result = {}
+    # for filename in tqdm(glob('submissions/exam-group-1-examen-groep-1/*/*.py')):
     #     result[filename] = analyze_file(filename)
     # with open('result.pickle', 'wb') as f:
     #     pickle.dump(result, f)
     with open('result.pickle', 'rb') as f:
         result = pickle.load(f)
-    # messages = reduce(lambda x, y: x | y, [{x for x in map(lambda x: x[0], item[1])} for item in result.values()])
-    # paths = paths_for_message(result, 'R1714-consider-using-in')
-    # matrix = [[0] * len(paths) for _ in paths]
-    # for i, p1 in enumerate(paths):
-    #     for j, p2 in enumerate(paths):
-    #         matrix[i][j] = edit_distance(p1, p2)
 
-    # print(max(reduce(lambda x, y: x + y, matrix))) # In centrifuge: 57 (59 exam 1)
-    # print(sum(reduce(lambda x, y: x + y, matrix)) / (len(matrix) ** 2)) # In centrifuge: 13.23 (13.40 exam 2)
+    haves, have_nots = split_with_message(result, 'R1714-consider-using-in')
