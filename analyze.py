@@ -5,7 +5,7 @@ from io import StringIO
 import json
 from functools import reduce
 from glob import glob
-from treeminer import Treeminer, to_string_encoding
+from treeminer import Treeminerd, to_string_encoding
 import pickle
 
 from pylint import lint
