@@ -15,10 +15,12 @@ def to_string_encoding(tree):
             yield elem
         yield -1
 
+
 class MinerAlgorithm:
     """
     Abstract class to keep the generic parts of treeminer analyses the same
     """
+
     def __init__(self, database, support=0.9):
         """
         database: list of trees
@@ -359,6 +361,7 @@ if __name__ == "__main__":
                             {"name": "4", "children": [{"name": "4", "children": []}]},
                         ],
                     },
+                    {"name": "2", "children": []},
                     {
                         "name": "3",
                         "children": [
@@ -367,6 +370,7 @@ if __name__ == "__main__":
                             {"name": "4", "children": [{"name": "4", "children": []}]},
                         ],
                     },
+                    {"name": "2", "children": []},
                     {
                         "name": "3",
                         "children": [
@@ -374,10 +378,10 @@ if __name__ == "__main__":
                             {"name": "4", "children": [{"name": "4", "children": []}]},
                         ],
                     },
+                    {"name": "2", "children": []},
                     {
                         "name": "3",
-                        "children": [
-                        ],
+                        "children": [],
                     },
                 ],
             },
@@ -398,6 +402,7 @@ if __name__ == "__main__":
                             {"name": "4", "children": [{"name": "4", "children": []}]},
                         ],
                     },
+                    {"name": "2", "children": []},
                     {
                         "name": "3",
                         "children": [
@@ -406,6 +411,7 @@ if __name__ == "__main__":
                             {"name": "4", "children": [{"name": "4", "children": []}]},
                         ],
                     },
+                    {"name": "2", "children": []},
                     {
                         "name": "3",
                         "children": [
@@ -431,6 +437,32 @@ if __name__ == "__main__":
                     {"name": "3", "children": []},
                 ],
             },
+            {
+                "name": "1",
+                "children": [
+                    {"name": "3", "children": [{"name": "2", "children": []}]},
+                    {
+                        "name": "5",
+                        "children": [
+                            {
+                                "name": "1",
+                                "children": [
+                                    {"name": "2", "children": []},
+                                    {
+                                        "name": "4",
+                                        "children": [{"name": "4", "children": []}],
+                                    },
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            },
+        ]
+    )
+
+    analyze_trees(
+        [
             {
                 "name": "1",
                 "children": [
