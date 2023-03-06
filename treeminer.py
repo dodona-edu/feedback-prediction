@@ -65,7 +65,7 @@ class Treeminerd(MinerAlgorithm):
         in_scope_dict = defaultdict(list)
         for elem1 in scope_list_x:
             for elem2 in scope_list_y:
-                if elem1 != elem2 and elem1[0] == elem2[0] and elem1[1][-1][0] <= elem2[1][-1][0] and elem1[1][-1][1] >= elem2[1][-1][1]:
+                if elem1 != elem2 and elem1[0] == elem2[0] and elem1[1][-1] != elem2[1][-1] and elem1[1][-1][0] <= elem2[1][-1][0] and elem1[1][-1][1] >= elem2[1][-1][1]:
                     to_add = in_scope_dict[elem1[0]]
                     should_add = True
                     for k in range(len(to_add) - 1, -1, -1):
@@ -268,7 +268,7 @@ if __name__ == "__main__":
         print()
         assert (
             t_patterns == td_patterns
-        ), f"difference in patterns for {trees}: {td_patterns - t_patterns} {t_patterns - td_patterns} {len(t_patterns)} {len(td_patterns)}"
+        ), f"difference in patterns for {trees}: {td_patterns - t_patterns} {t_patterns - td_patterns} {len(td_patterns)} {len(t_patterns)}"
 
     analyze_trees(
         [
@@ -330,6 +330,24 @@ if __name__ == "__main__":
                                 "children": [{"name": "3", "children": []}],
                             }
                         ],
+                    },
+                ],
+            }
+        ]
+    )
+
+    analyze_trees(
+        [
+            {
+                "name": "1",
+                "children": [
+                    {
+                        "name": "1",
+                        "children": [{"name": "2", "children": []}],
+                    },
+                    {
+                        "name": "1",
+                        "children": [{"name": "2", "children": []}],
                     },
                 ],
             }
