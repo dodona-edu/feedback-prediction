@@ -142,16 +142,7 @@ class Treeminerd(MinerAlgorithm):
                     for elem1 in scope_list_f_1[self.label2id[x]]:
                         for elem2 in scope_list_f_1[self.label2id[y]]:
                             if elem1 != elem2 and elem1[0] == elem2[0] and elem1[1][0] <= elem2[1][0] and elem1[1][1] >= elem2[1][1]:
-                                to_add = scope_dict[elem1[0]]
-                                should_add = True
-                                for i in range(len(to_add) - 1, -1, -1):
-                                    if to_add[i][1] == elem2[1]:
-                                        if to_add[i][0][0] <= elem1[1][0] and to_add[i][0][1] >= elem1[1][1]:
-                                            del to_add[i]
-                                        elif elem1[1][0] <= to_add[i][0][0] and elem1[1][1] >= to_add[i][0][1]:
-                                            should_add = False
-                                if should_add:
-                                    to_add.append([elem1[1], elem2[1]])
+                                scope_dict[elem1[0]].append([elem1[1], elem2[1]])
                     scope_list = []
                     for tid in scope_dict:
                         for scope_vector in scope_dict[tid]:
@@ -351,6 +342,45 @@ if __name__ == "__main__":
                     },
                 ],
             }
+        ]
+    )
+
+    analyze_trees(
+        [
+            {
+                "name": "1",
+                "children": [
+                    {"name": "2", "children": []},
+                    {
+                        "name": "3",
+                        "children": [
+                            {"name": "4", "children": [{"name": "4", "children": []}]},
+                            {"name": "4", "children": [{"name": "4", "children": []}]},
+                            {"name": "4", "children": [{"name": "4", "children": []}]},
+                        ],
+                    },
+                    {
+                        "name": "3",
+                        "children": [
+                            {"name": "4", "children": [{"name": "4", "children": []}]},
+                            {"name": "4", "children": [{"name": "4", "children": []}]},
+                            {"name": "4", "children": [{"name": "4", "children": []}]},
+                        ],
+                    },
+                    {
+                        "name": "3",
+                        "children": [
+                            {"name": "4", "children": [{"name": "4", "children": []}]},
+                            {"name": "4", "children": [{"name": "4", "children": []}]},
+                        ],
+                    },
+                    {
+                        "name": "3",
+                        "children": [
+                        ],
+                    },
+                ],
+            },
         ]
     )
 
