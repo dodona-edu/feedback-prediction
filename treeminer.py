@@ -2,6 +2,7 @@
 Module containing treeminer implementation.
 """
 from collections import defaultdict
+import sys
 
 
 def to_string_encoding(tree):
@@ -40,6 +41,12 @@ class MinerAlgorithm:
         self.label2id = {el: i for i, el in enumerate(self.f_1)}
         self.support = support
 
+
+class Treeminerd(MinerAlgorithm):
+    """
+    Class representing a treeminerd analysis
+    """
+
     def enumerate_frequent_subtrees(self, prefix, clazz):
         """
         Recursively enumerate frequent subtrees until no more subtrees of larger size can be added
@@ -50,62 +57,50 @@ class MinerAlgorithm:
             for y, j, scope_list_y in clazz:
                 if i == j:
                     scope_list = self.in_scope_test(x, i, scope_list_x, y, j, scope_list_y)
-                    if len(set(elem[0] for elem in scope_list)) / self.tree_count >= self.support:
+                    if len(scope_list) / self.tree_count >= self.support:
                         subclass.append((y, j + 1, scope_list))
                 scope_list = self.out_scope_test(x, i, scope_list_x, y, j, scope_list_y)
-                if len(set(elem[0] for elem in scope_list)) / self.tree_count >= self.support:
+                if len(scope_list) / self.tree_count >= self.support:
                     subclass.append((y, j, scope_list))
             self.enumerate_frequent_subtrees(prefix + (-1,) * (len(prefix) - (2 * prefix.count(-1)) - i - 1) + (self.f_1[x],), subclass)
 
-
-class Treeminerd(MinerAlgorithm):
-    """
-    Class representing a treeminerd analysis
-    """
-
     def in_scope_test(self, x, i, scope_list_x, y, j, scope_list_y):
         in_scope_dict = defaultdict(list)
-        for elem1 in scope_list_x:
-            for elem2 in scope_list_y:
-                if elem1 != elem2 and elem1[0] == elem2[0] and elem1[1][-1] != elem2[1][-1] and elem1[1][-1][0] <= elem2[1][-1][0] and elem1[1][-1][1] >= elem2[1][-1][1]:
-                    to_add = in_scope_dict[elem1[0]]
-                    should_add = True
-                    for k in range(len(to_add) - 1, -1, -1):
-                        if to_add[k][1] == elem2[1]:
-                            if to_add[k][0][0] <= elem1[1][0] and to_add[k][0][1] >= elem1[1][1]:
-                                del to_add[k]
-                            elif elem1[1][0] <= to_add[k][0][0] and elem1[1][1] >= to_add[k][0][1]:
+        for tid in scope_list_x:
+            for elem1 in scope_list_x[tid]:
+                for elem2 in scope_list_y[tid]:
+                    if elem1 != elem2 and elem1[-1] != elem2[-1] and elem1[-1][0] <= elem2[-1][0] and elem1[-1][1] >= elem2[-1][1]:
+                        should_add = True
+                        for elem3 in scope_list_x[tid]:
+                            if elem1 != elem3 and elem2 != elem3 and elem1[-1][0] <= elem3[-1][0] and elem1[-1][1] >= elem3[-1][1] and elem3[-1][0] <= elem2[-1][0] and elem3[-1][1] >= elem2[-1][1]:
                                 should_add = False
-                    if should_add:
-                        path = [e for e in elem1[1] if e[1] >= elem2[1][-1][1]] + [e for e in elem2[1] if e[1] >= elem2[1][-1][1]]
-                        to_add.append(sorted(set(path)))
-        scope_list = []
-        for tid in in_scope_dict:
-            for scope_vector in in_scope_dict[tid]:
-                if ((tid, scope_vector)) not in scope_list:
-                    scope_list.append((tid, scope_vector))
-        return scope_list
+                        if should_add:
+                            path = [e for e in elem1 if e[1] >= elem2[-1][1]] + [e for e in elem2 if e[1] >= elem2[-1][1]]
+                            in_scope_dict[tid].append(sorted(set(path)))
+        return in_scope_dict
 
     def out_scope_test(self, x, i, scope_list_x, y, j, scope_list_y):
-        scope_list = []
-        for elem1 in scope_list_x:
-            for elem2 in scope_list_y:
-                if elem1 != elem2 and elem1[0] == elem2[0]:
-                    to_be_added = None
-                    if j + 1 < len(elem1[1]) and elem1[1][j][0] <= elem2[1][-1][0] and elem1[1][j][1] >= elem2[1][-1][1] and elem1[1][j + 1][1] < elem2[1][-1][0]:
-                        to_be_added = (elem1[0], elem1[1][: j + 1] + [elem2[1][-1]])
-                    elif j < len(elem1[1]) and elem1[1][j][1] < elem2[1][-1][0] and elem1[1][j][0] <= elem2[1][j][0] and elem1[1][j][1] >= elem2[1][j][1]:
-                        to_be_added = (elem1[0], elem2[1][: j + 1] + [elem2[1][-1]])
-                    if to_be_added is not None:
-                        should_add = True
-                        for k in range(len(scope_list) - 1, -1, -1):
-                            if scope_list[k][0] == to_be_added[0] and scope_list[k][1][-1] == to_be_added[1][-1] and scope_list[k][1][-2][0] > to_be_added[1][-2][0]:
-                                should_add = False
-                            if scope_list[k][0] == to_be_added[0] and scope_list[k][1][-1] == to_be_added[1][-1] and scope_list[k][1][-2][0] < to_be_added[1][-2][0]:
-                                del scope_list[k]
-                        if should_add and to_be_added not in scope_list:
-                            scope_list.append(to_be_added)
-        return scope_list
+        scope_dict = defaultdict(list)
+        for tid in scope_list_x:
+            for elem1 in scope_list_x[tid]:
+                for elem2 in scope_list_y[tid]:
+                    if elem1 != elem2:
+                        to_be_added = None
+                        if j + 1 < len(elem1) and elem1[j][0] <= elem2[-1][0] and elem1[j][1] >= elem2[-1][1] and elem1[j + 1][1] < elem2[-1][0]:
+                            to_be_added = elem1[: j + 1] + [elem2[-1]]
+                        elif j < len(elem1) and elem1[j][1] < elem2[-1][0] and elem1[j][0] <= elem2[j][0] and elem1[j][1] >= elem2[j][1]:
+                            to_be_added = elem2[: j + 1] + [elem2[-1]]
+                        if to_be_added is not None:
+                            scope_list = scope_dict[tid]
+                            should_add = True
+                            for k in range(len(scope_list) - 1, -1, -1):
+                                if scope_list[k][-1] == to_be_added[-1] and scope_list[k][-2][0] > to_be_added[-2][0]:
+                                    should_add = False
+                                if scope_list[k][-1] == to_be_added[-1] and scope_list[k][-2][0] < to_be_added[-2][0]:
+                                    del scope_list[k]
+                            if should_add and to_be_added not in scope_list:
+                                scope_list.append(to_be_added)
+        return scope_dict
 
 
     def get_patterns(self):
@@ -145,11 +140,7 @@ class Treeminerd(MinerAlgorithm):
                         for elem2 in scope_list_f_1[self.label2id[y]]:
                             if elem1 != elem2 and elem1[0] == elem2[0] and elem1[1][0] <= elem2[1][0] and elem1[1][1] >= elem2[1][1]:
                                 scope_dict[elem1[0]].append([elem1[1], elem2[1]])
-                    scope_list = []
-                    for tid in scope_dict:
-                        for scope_vector in scope_dict[tid]:
-                            scope_list.append((tid, scope_vector))
-                    subclass.append((self.label2id[y], 0, scope_list))
+                    subclass.append((self.label2id[y], 0, scope_dict))
             self.enumerate_frequent_subtrees((x,), subclass)
         return self.frequent_patterns
 
@@ -158,6 +149,23 @@ class Treeminer(MinerAlgorithm):
     """
     Class representing a treeminer analysis
     """
+
+    def enumerate_frequent_subtrees(self, prefix, clazz):
+        """
+        Recursively enumerate frequent subtrees until no more subtrees of larger size can be added
+        """
+        self.frequent_patterns.add(prefix)
+        for x, i, scope_list_x in clazz:
+            subclass = []
+            for y, j, scope_list_y in clazz:
+                if i == j:
+                    scope_list = self.in_scope_test(x, i, scope_list_x, y, j, scope_list_y)
+                    if len(set(elem[0] for elem in scope_list)) / self.tree_count >= self.support:
+                        subclass.append((y, j + 1, scope_list))
+                scope_list = self.out_scope_test(x, i, scope_list_x, y, j, scope_list_y)
+                if len(set(elem[0] for elem in scope_list)) / self.tree_count >= self.support:
+                    subclass.append((y, j, scope_list))
+            self.enumerate_frequent_subtrees(prefix + (-1,) * (len(prefix) - (2 * prefix.count(-1)) - i - 1) + (self.f_1[x],), subclass)
 
     def in_scope_test(self, x, i, scope_list_x, y, j, scope_list_y):
         scope_list = []
