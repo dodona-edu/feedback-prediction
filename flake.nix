@@ -29,6 +29,40 @@
 
           pythonImportsCheck = [ "tree_sitter" ];
         };
+        bounded-pool-executor = pkgs.python3Packages.buildPythonPackage rec {
+          pname = "bounded_pool_executor";
+          version = "0.0.3";
+          format = "setuptools";
+
+          src = pkgs.python3Packages.fetchPypi {
+            inherit pname version;
+            sha256 = "4JIiG8OK3lVeEGSDH57YAFgPo0pLbY6d082WFUlif24=";
+          };
+
+          propagatedBuildInputs = [];
+
+          pythonImportsCheck = [ "bounded_pool_executor" ];
+        };
+        pqdm = pkgs.python3Packages.buildPythonPackage rec {
+          pname = "pqdm";
+          version = "0.2.0";
+          format = "setuptools";
+
+          src = pkgs.python3Packages.fetchPypi {
+            inherit pname version;
+            sha256 = "2Z0B/kmNMntEDr/gjBTITg3J7M5hcu+aMflrsar06eM=";
+          };
+
+          doCheck = false;
+
+          propagatedBuildInputs = [
+            pkgs.python3Packages.typing-extensions
+            pkgs.python3Packages.tqdm
+            bounded-pool-executor
+          ];
+
+          pythonImportsCheck = [ "pqdm.processes" "pqdm.threads" ];
+        };
       in
       {
         devShells = rec {
@@ -38,7 +72,7 @@
             imports = [ "${devshell}/extra/language/c.nix" ];
             packages = with pkgs; [
               nixpkgs-fmt
-              (python3.withPackages (ps: [ tree-sitter ps.pylint ps.tqdm ps.python-lsp-server ]))
+              (python3.withPackages (ps: [ tree-sitter ps.pylint ps.tqdm ps.python-lsp-server pqdm ]))
             ];
             language.c = {
               compiler = pkgs.gcc;

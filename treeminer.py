@@ -37,7 +37,9 @@ class MinerAlgorithm:
                     if elem not in atom_occurences:
                         atom_occurences[elem] = 0
                     atom_occurences[elem] += 1
-        self.f_1 = sorted(k for k, v in atom_occurences.items() if v / self.tree_count >= support)
+        self.f_1 = sorted(
+            k for k, v in atom_occurences.items() if v / self.tree_count >= support
+        )
         self.label2id = {el: i for i, el in enumerate(self.f_1)}
         self.support = support
 
@@ -56,26 +58,47 @@ class Treeminerd(MinerAlgorithm):
             subclass = []
             for y, j, scope_list_y in clazz:
                 if i == j:
-                    scope_list = self.in_scope_test(x, i, scope_list_x, y, j, scope_list_y)
+                    scope_list = self.in_scope_test(
+                        x, i, scope_list_x, y, j, scope_list_y
+                    )
                     if len(scope_list) / self.tree_count >= self.support:
                         subclass.append((y, j + 1, scope_list))
                 scope_list = self.out_scope_test(x, i, scope_list_x, y, j, scope_list_y)
                 if len(scope_list) / self.tree_count >= self.support:
                     subclass.append((y, j, scope_list))
-            self.enumerate_frequent_subtrees(prefix + (-1,) * (len(prefix) - (2 * prefix.count(-1)) - i - 1) + (self.f_1[x],), subclass)
+            self.enumerate_frequent_subtrees(
+                prefix
+                + (-1,) * (len(prefix) - (2 * prefix.count(-1)) - i - 1)
+                + (self.f_1[x],),
+                subclass,
+            )
 
     def in_scope_test(self, x, i, scope_list_x, y, j, scope_list_y):
         in_scope_dict = defaultdict(list)
         for tid in scope_list_x:
             for elem1 in scope_list_x[tid]:
                 for elem2 in scope_list_y[tid]:
-                    if elem1 != elem2 and elem1[-1] != elem2[-1] and elem1[-1][0] <= elem2[-1][0] and elem1[-1][1] >= elem2[-1][1]:
+                    if (
+                        elem1 != elem2
+                        and elem1[-1] != elem2[-1]
+                        and elem1[-1][0] <= elem2[-1][0]
+                        and elem1[-1][1] >= elem2[-1][1]
+                    ):
                         should_add = True
                         for elem3 in scope_list_x[tid]:
-                            if elem1 != elem3 and elem2 != elem3 and elem1[-1][0] <= elem3[-1][0] and elem1[-1][1] >= elem3[-1][1] and elem3[-1][0] <= elem2[-1][0] and elem3[-1][1] >= elem2[-1][1]:
+                            if (
+                                elem1 != elem3
+                                and elem2 != elem3
+                                and elem1[-1][0] <= elem3[-1][0]
+                                and elem1[-1][1] >= elem3[-1][1]
+                                and elem3[-1][0] <= elem2[-1][0]
+                                and elem3[-1][1] >= elem2[-1][1]
+                            ):
                                 should_add = False
                         if should_add:
-                            path = [e for e in elem1 if e[1] >= elem2[-1][1]] + [e for e in elem2 if e[1] >= elem2[-1][1]]
+                            path = [e for e in elem1 if e[1] >= elem2[-1][1]] + [
+                                e for e in elem2 if e[1] >= elem2[-1][1]
+                            ]
                             in_scope_dict[tid].append(sorted(set(path)))
         return in_scope_dict
 
@@ -86,28 +109,45 @@ class Treeminerd(MinerAlgorithm):
                 for elem2 in scope_list_y[tid]:
                     if elem1 != elem2:
                         to_be_added = None
-                        if j + 1 < len(elem1) and elem1[j][0] <= elem2[-1][0] and elem1[j][1] >= elem2[-1][1] and elem1[j + 1][1] < elem2[-1][0]:
+                        if (
+                            j + 1 < len(elem1)
+                            and elem1[j][0] <= elem2[-1][0]
+                            and elem1[j][1] >= elem2[-1][1]
+                            and elem1[j + 1][1] < elem2[-1][0]
+                        ):
                             to_be_added = elem1[: j + 1] + [elem2[-1]]
-                        elif j < len(elem1) and elem1[j][1] < elem2[-1][0] and elem1[j][0] <= elem2[j][0] and elem1[j][1] >= elem2[j][1]:
+                        elif (
+                            j < len(elem1)
+                            and elem1[j][1] < elem2[-1][0]
+                            and elem1[j][0] <= elem2[j][0]
+                            and elem1[j][1] >= elem2[j][1]
+                        ):
                             to_be_added = elem2[: j + 1] + [elem2[-1]]
                         if to_be_added is not None:
                             scope_list = scope_dict[tid]
                             should_add = True
                             for k in range(len(scope_list) - 1, -1, -1):
-                                if scope_list[k][-1] == to_be_added[-1] and scope_list[k][-2][0] > to_be_added[-2][0]:
+                                if (
+                                    scope_list[k][-1] == to_be_added[-1]
+                                    and scope_list[k][-2][0] > to_be_added[-2][0]
+                                ):
                                     should_add = False
-                                if scope_list[k][-1] == to_be_added[-1] and scope_list[k][-2][0] < to_be_added[-2][0]:
+                                if (
+                                    scope_list[k][-1] == to_be_added[-1]
+                                    and scope_list[k][-2][0] < to_be_added[-2][0]
+                                ):
                                     del scope_list[k]
                             if should_add and to_be_added not in scope_list:
                                 scope_list.append(to_be_added)
         return scope_dict
 
-
     def get_patterns(self):
         """
         Calculate f_2 and start recursive search for f_n
         """
-        f_2_support = [[set() for _ in range(len(self.f_1))] for _ in range(len(self.f_1))]
+        f_2_support = [
+            [set() for _ in range(len(self.f_1))] for _ in range(len(self.f_1))
+        ]
         scope_list_f_1 = {}
         for tid, tree in enumerate(self.database):
             node_count = -1
@@ -123,22 +163,35 @@ class Treeminerd(MinerAlgorithm):
                             node_count += 1
                             depth_stack += 1
                             if tree[j] in self.f_1:
-                                f_2_support[self.label2id[elem1]][self.label2id[tree[j]]].add(tid)
+                                f_2_support[self.label2id[elem1]][
+                                    self.label2id[tree[j]]
+                                ].add(tid)
                         else:
                             depth_stack -= 1
                         j += 1
                     if self.f_1.index(elem1) not in scope_list_f_1:
                         scope_list_f_1[self.label2id[elem1]] = []
-                    scope_list_f_1[self.label2id[elem1]].append((tid, (orig_node_count, node_count)))
+                    scope_list_f_1[self.label2id[elem1]].append(
+                        (tid, (orig_node_count, node_count))
+                    )
                     node_count = orig_node_count
         for x in self.f_1:
             subclass = []
             for y in self.f_1:
-                if len(f_2_support[self.label2id[x]][self.label2id[y]]) / self.tree_count >= self.support:
+                if (
+                    len(f_2_support[self.label2id[x]][self.label2id[y]])
+                    / self.tree_count
+                    >= self.support
+                ):
                     scope_dict = defaultdict(list)
                     for elem1 in scope_list_f_1[self.label2id[x]]:
                         for elem2 in scope_list_f_1[self.label2id[y]]:
-                            if elem1 != elem2 and elem1[0] == elem2[0] and elem1[1][0] <= elem2[1][0] and elem1[1][1] >= elem2[1][1]:
+                            if (
+                                elem1 != elem2
+                                and elem1[0] == elem2[0]
+                                and elem1[1][0] <= elem2[1][0]
+                                and elem1[1][1] >= elem2[1][1]
+                            ):
                                 scope_dict[elem1[0]].append([elem1[1], elem2[1]])
                     subclass.append((self.label2id[y], 0, scope_dict))
             self.enumerate_frequent_subtrees((x,), subclass)
@@ -159,13 +212,26 @@ class Treeminer(MinerAlgorithm):
             subclass = []
             for y, j, scope_list_y in clazz:
                 if i == j:
-                    scope_list = self.in_scope_test(x, i, scope_list_x, y, j, scope_list_y)
-                    if len(set(elem[0] for elem in scope_list)) / self.tree_count >= self.support:
+                    scope_list = self.in_scope_test(
+                        x, i, scope_list_x, y, j, scope_list_y
+                    )
+                    if (
+                        len(set(elem[0] for elem in scope_list)) / self.tree_count
+                        >= self.support
+                    ):
                         subclass.append((y, j + 1, scope_list))
                 scope_list = self.out_scope_test(x, i, scope_list_x, y, j, scope_list_y)
-                if len(set(elem[0] for elem in scope_list)) / self.tree_count >= self.support:
+                if (
+                    len(set(elem[0] for elem in scope_list)) / self.tree_count
+                    >= self.support
+                ):
                     subclass.append((y, j, scope_list))
-            self.enumerate_frequent_subtrees(prefix + (-1,) * (len(prefix) - (2 * prefix.count(-1)) - i - 1) + (self.f_1[x],), subclass)
+            self.enumerate_frequent_subtrees(
+                prefix
+                + (-1,) * (len(prefix) - (2 * prefix.count(-1)) - i - 1)
+                + (self.f_1[x],),
+                subclass,
+            )
 
     def in_scope_test(self, x, i, scope_list_x, y, j, scope_list_y):
         scope_list = []
@@ -262,80 +328,14 @@ class Treeminer(MinerAlgorithm):
 if __name__ == "__main__":
 
     def analyze_trees(trees):
-        td_patterns = Treeminerd(trees).get_patterns()
-        print(td_patterns)
         t_patterns = Treeminer(trees).get_patterns()
         print(t_patterns)
+        td_patterns = Treeminerd(trees).get_patterns()
+        print(td_patterns)
         print()
         assert (
             t_patterns == td_patterns
         ), f"difference in patterns for {trees}: {td_patterns - t_patterns} {t_patterns - td_patterns} {len(td_patterns)} {len(t_patterns)}"
-
-    analyze_trees(
-        [
-            {
-                "name": "1",
-                "children": [
-                    {"name": "3", "children": [{"name": "2", "children": []}]},
-                    {"name": "3", "children": [{"name": "1", "children": []}]},
-                ],
-            },
-            {
-                "name": "1",
-                "children": [
-                    {"name": "3", "children": [{"name": "2", "children": []}]},
-                    {"name": "3", "children": [{"name": "1", "children": []}]},
-                ],
-            },
-        ]
-    )
-    analyze_trees(
-        [
-            {
-                "name": "1",
-                "children": [
-                    {"name": "3", "children": []},
-                    {
-                        "name": "3",
-                        "children": [
-                            {"name": "1", "children": []},
-                            {"name": "2", "children": []},
-                        ],
-                    },
-                ],
-            },
-            {
-                "name": "1",
-                "children": [
-                    {"name": "3", "children": [{"name": "2", "children": []}]},
-                    {"name": "3", "children": [{"name": "1", "children": []}]},
-                ],
-            },
-        ]
-    )
-
-    analyze_trees(
-        [
-            {
-                "name": "1",
-                "children": [
-                    {
-                        "name": "2",
-                        "children": [{"name": "3", "children": []}],
-                    },
-                    {
-                        "name": "2",
-                        "children": [
-                            {
-                                "name": "2",
-                                "children": [{"name": "3", "children": []}],
-                            }
-                        ],
-                    },
-                ],
-            }
-        ]
-    )
 
     analyze_trees(
         [
@@ -401,95 +401,465 @@ if __name__ == "__main__":
             {
                 "name": "1",
                 "children": [
-                    {"name": "2", "children": []},
                     {
-                        "name": "3",
+                        "name": "2",
                         "children": [
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
+                            {
+                                "name": "3",
+                                "children": [
+                                    {
+                                        "name": "4",
+                                        "children": [
+                                            {
+                                                "name": "3",
+                                                "children": [
+                                                    {
+                                                        "name": "5",
+                                                        "children": [
+                                                            {
+                                                                "name": "6",
+                                                                "children": [],
+                                                            },
+                                                            {
+                                                                "name": "7",
+                                                                "children": [
+                                                                    {
+                                                                        "name": "8",
+                                                                        "children": [
+                                                                            {
+                                                                                "name": "9",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": '"',
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": '"',
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ".",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "10",
+                                                                                "children": [],
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                    {
+                                                                        "name": "11",
+                                                                        "children": [
+                                                                            {
+                                                                                "name": "(",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "8",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": "12",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": ".",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "n",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ",",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "8",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": "12",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": ".",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "13",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ")",
+                                                                                "children": [],
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                ],
+                                                            },
+                                                        ],
+                                                    }
+                                                ],
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
                         ],
-                    },
-                    {"name": "2", "children": []},
-                    {
-                        "name": "3",
-                        "children": [
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
-                        ],
-                    },
-                    {"name": "2", "children": []},
-                    {
-                        "name": "3",
-                        "children": [
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
-                        ],
-                    },
-                ],
-            },
-            {
-                "name": "2",
-                "children": [
-                    {
-                        "name": "1",
-                        "children": [
-                            {"name": "5", "children": []},
-                            {"name": "2", "children": []},
-                            {"name": "4", "children": [{"name": "4", "children": []}]},
-                        ],
-                    },
-                    {"name": "2", "children": []},
-                    {"name": "3", "children": []},
+                    }
                 ],
             },
             {
                 "name": "1",
                 "children": [
-                    {"name": "3", "children": [{"name": "2", "children": []}]},
                     {
-                        "name": "5",
+                        "name": "2",
                         "children": [
                             {
-                                "name": "1",
+                                "name": "3",
                                 "children": [
-                                    {"name": "2", "children": []},
                                     {
                                         "name": "4",
-                                        "children": [{"name": "4", "children": []}],
-                                    },
+                                        "children": [
+                                            {
+                                                "name": "3",
+                                                "children": [
+                                                    {
+                                                        "name": "5",
+                                                        "children": [
+                                                            {
+                                                                "name": "6",
+                                                                "children": [],
+                                                            },
+                                                            {
+                                                                "name": "7",
+                                                                "children": [
+                                                                    {
+                                                                        "name": "8",
+                                                                        "children": [
+                                                                            {
+                                                                                "name": "9",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": '"',
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": '"',
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ".",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "10",
+                                                                                "children": [],
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                    {
+                                                                        "name": "11",
+                                                                        "children": [
+                                                                            {
+                                                                                "name": "(",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "8",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": "12",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": ".",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "aantal",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ",",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "8",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": "12",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": ".",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "14",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ")",
+                                                                                "children": [],
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                ],
+                                                            },
+                                                        ],
+                                                    }
+                                                ],
+                                            }
+                                        ],
+                                    }
                                 ],
                             }
                         ],
-                    },
+                    }
                 ],
             },
-        ]
-    )
-
-    analyze_trees(
-        [
             {
                 "name": "1",
                 "children": [
-                    {"name": "3", "children": [{"name": "2", "children": []}]},
                     {
-                        "name": "5",
+                        "name": "2",
                         "children": [
                             {
-                                "name": "1",
+                                "name": "3",
                                 "children": [
-                                    {"name": "2", "children": []},
                                     {
                                         "name": "4",
-                                        "children": [{"name": "4", "children": []}],
-                                    },
+                                        "children": [
+                                            {
+                                                "name": "3",
+                                                "children": [
+                                                    {
+                                                        "name": "5",
+                                                        "children": [
+                                                            {
+                                                                "name": "6",
+                                                                "children": [],
+                                                            },
+                                                            {
+                                                                "name": "7",
+                                                                "children": [
+                                                                    {
+                                                                        "name": "8",
+                                                                        "children": [
+                                                                            {
+                                                                                "name": "9",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": '"',
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": '"',
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ".",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "10",
+                                                                                "children": [],
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                    {
+                                                                        "name": "11",
+                                                                        "children": [
+                                                                            {
+                                                                                "name": "(",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "8",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": "12",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": ".",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "15",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ",",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "8",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": "12",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": ".",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "16",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ")",
+                                                                                "children": [],
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                ],
+                                                            },
+                                                        ],
+                                                    }
+                                                ],
+                                            }
+                                        ],
+                                    }
                                 ],
                             }
                         ],
-                    },
+                    }
+                ],
+            },
+            {
+                "name": "1",
+                "children": [
+                    {
+                        "name": "2",
+                        "children": [
+                            {
+                                "name": "3",
+                                "children": [
+                                    {
+                                        "name": "4",
+                                        "children": [
+                                            {
+                                                "name": "3",
+                                                "children": [
+                                                    {
+                                                        "name": "5",
+                                                        "children": [
+                                                            {
+                                                                "name": "6",
+                                                                "children": [],
+                                                            },
+                                                            {
+                                                                "name": "7",
+                                                                "children": [
+                                                                    {
+                                                                        "name": "8",
+                                                                        "children": [
+                                                                            {
+                                                                                "name": "9",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": '"',
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": '"',
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ".",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "10",
+                                                                                "children": [],
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                    {
+                                                                        "name": "11",
+                                                                        "children": [
+                                                                            {
+                                                                                "name": "(",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "8",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": "12",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": ".",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "15",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ",",
+                                                                                "children": [],
+                                                                            },
+                                                                            {
+                                                                                "name": "8",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "name": "12",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": ".",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "13",
+                                                                                        "children": [],
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            {
+                                                                                "name": ")",
+                                                                                "children": [],
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                ],
+                                                            },
+                                                        ],
+                                                    }
+                                                ],
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
                 ],
             },
         ]
