@@ -1,4 +1,6 @@
 /build
 /submissions
+/output
+/.idea
 __pycache__
 /result.pickle
