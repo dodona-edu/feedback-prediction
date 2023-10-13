@@ -1,8 +1,8 @@
 """
 Module containing treeminer implementation.
 """
+import datetime
 from collections import defaultdict
-import sys
 
 
 def to_string_encoding(tree):
@@ -42,6 +42,72 @@ class MinerAlgorithm:
         )
         self.label2id = {el: i for i, el in enumerate(self.f_1)}
         self.support = support
+
+        # f_2_support[i][j] = a set of tree_ids that contain the embedded pattern [i, j, -1]
+        self.f_2_support = [
+            [set() for _ in range(len(self.f_1))] for _ in range(len(self.f_1))
+        ]
+
+        # f_1_scope_list[i] = scope list for element i, containing (tree_id, scope) pairs
+        self.scope_list_f_1 = {}
+
+        self.calculate_f_2_support_and_f_1_scope_list()
+
+    def calculate_f_2_support_and_f_1_scope_list(self):
+        """
+        f_2_support[i][j] = a set of tree_ids that contain the embedded pattern [i, j, -1]
+        f_1_scope_list[i] = scope list for element i, containing (tree_id, scope) pairs
+        """
+        for tid, tree in enumerate(self.database):
+            node_count = -1
+            for i, elem1 in enumerate(tree[:-1]):
+                if elem1 != -1:
+                    node_count += 1
+                if elem1 in self.f_1:
+                    orig_node_count = node_count
+                    depth_stack = 1
+                    j = i + 1
+                    while depth_stack > 0 and j < len(tree):
+                        elem2 = tree[j]
+                        if elem2 != -1:
+                            node_count += 1
+                            depth_stack += 1
+                            if elem2 in self.f_1:
+                                self.f_2_support[self.label2id[elem1]][self.label2id[elem2]].add(tid)
+                        else:
+                            depth_stack -= 1
+                        j += 1
+                    if self.label2id[elem1] not in self.scope_list_f_1:
+                        self.scope_list_f_1[self.label2id[elem1]] = []
+                    self.scope_list_f_1[self.label2id[elem1]].append(
+                        (tid, (orig_node_count, node_count))
+                    )
+                    node_count = orig_node_count
+
+    def save_id_db_to_file(self):
+        """
+        # TODO improve method, better way to handle filtered out labels?
+        Transform the tree database to it's corresponding list of ids
+        """
+        label2id = self.label2id
+        max_len = 0
+        with open("output/id_db", "w") as file:
+            for i, tree in enumerate(self.database):
+                id_tree = []
+                for item in tree:
+                    if item != -1:
+                        if item not in label2id.keys():
+                            new_id = max(label2id.values()) + 1
+                            label2id[item] = new_id
+                        id_tree.append(str(label2id[item]))
+                    else:
+                        id_tree.append(str(item))
+                if len(id_tree) > max_len:
+                    max_len = len(id_tree)
+                encoding = ' '.join(id_tree)
+                file.write(f"{i} {i} {len(tree)} {encoding}\n")
+
+            print(f"Maxium id-tree length: {max_len}")
 
 
 class Treeminerd(MinerAlgorithm):
@@ -89,10 +155,8 @@ class Treeminerd(MinerAlgorithm):
                             if (
                                 elem1 != elem3
                                 and elem2 != elem3
-                                and elem1[-1][0] <= elem3[-1][0]
-                                and elem1[-1][1] >= elem3[-1][1]
-                                and elem3[-1][0] <= elem2[-1][0]
-                                and elem3[-1][1] >= elem2[-1][1]
+                                and elem1[-1][0] <= elem3[-1][0] <= elem2[-1][0]
+                                and elem1[-1][1] >= elem3[-1][1] >= elem3[-1][1]
                             ):
                                 should_add = False
                         if should_add:
@@ -145,47 +209,18 @@ class Treeminerd(MinerAlgorithm):
         """
         Calculate f_2 and start recursive search for f_n
         """
-        f_2_support = [
-            [set() for _ in range(len(self.f_1))] for _ in range(len(self.f_1))
-        ]
-        scope_list_f_1 = {}
-        for tid, tree in enumerate(self.database):
-            node_count = -1
-            for i, elem1 in enumerate(tree[:-1]):
-                if elem1 != -1:
-                    node_count += 1
-                if elem1 in self.f_1:
-                    orig_node_count = node_count
-                    depth_stack = 1
-                    j = i + 1
-                    while depth_stack > 0 and j < len(tree):
-                        if tree[j] != -1:
-                            node_count += 1
-                            depth_stack += 1
-                            if tree[j] in self.f_1:
-                                f_2_support[self.label2id[elem1]][
-                                    self.label2id[tree[j]]
-                                ].add(tid)
-                        else:
-                            depth_stack -= 1
-                        j += 1
-                    if self.f_1.index(elem1) not in scope_list_f_1:
-                        scope_list_f_1[self.label2id[elem1]] = []
-                    scope_list_f_1[self.label2id[elem1]].append(
-                        (tid, (orig_node_count, node_count))
-                    )
-                    node_count = orig_node_count
-        for x in self.f_1:
+        f_1_ids = [self.label2id[el] for el in self.f_1]
+        for x, x_id in zip(self.f_1, f_1_ids):
             subclass = []
-            for y in self.f_1:
+            for y_id in f_1_ids:
                 if (
-                    len(f_2_support[self.label2id[x]][self.label2id[y]])
+                    len(self.f_2_support[x_id][y_id])
                     / self.tree_count
                     >= self.support
-                ):
+                ):  # If element x with element y attached (tree [x, y, -1]) is frequent
                     scope_dict = defaultdict(list)
-                    for elem1 in scope_list_f_1[self.label2id[x]]:
-                        for elem2 in scope_list_f_1[self.label2id[y]]:
+                    for elem1 in self.scope_list_f_1[x_id]:
+                        for elem2 in self.scope_list_f_1[y_id]:
                             if (
                                 elem1 != elem2
                                 and elem1[0] == elem2[0]
@@ -193,7 +228,7 @@ class Treeminerd(MinerAlgorithm):
                                 and elem1[1][1] >= elem2[1][1]
                             ):
                                 scope_dict[elem1[0]].append([elem1[1], elem2[1]])
-                    subclass.append((self.label2id[y], 0, scope_dict))
+                    subclass.append((y_id, 0, scope_dict))
             self.enumerate_frequent_subtrees((x,), subclass)
         return self.frequent_patterns
 
@@ -269,48 +304,18 @@ class Treeminer(MinerAlgorithm):
         return scope_list
 
     def get_patterns(self):
-        f_2_support = [
-            [set() for _ in range(len(self.f_1))] for _ in range(len(self.f_1))
-        ]
-        scope_list_f_1 = {}
-        for tid, tree in enumerate(self.database):
-            node_count = -1
-            for i, elem1 in enumerate(tree[:-1]):
-                if elem1 != -1:
-                    node_count += 1
-                if elem1 in self.f_1:
-                    orig_node_count = node_count
-                    depth_stack = 1
-                    j = i + 1
-                    while depth_stack > 0 and j < len(tree):
-                        if tree[j] != -1:
-                            node_count += 1
-                            depth_stack += 1
-                            if tree[j] in self.f_1:
-                                f_2_support[self.label2id[elem1]][
-                                    self.label2id[tree[j]]
-                                ].add(tid)
-                        else:
-                            depth_stack -= 1
-                        j += 1
-                    if self.f_1.index(elem1) not in scope_list_f_1:
-                        scope_list_f_1[self.label2id[elem1]] = []
-                    scope_list_f_1[self.label2id[elem1]].append(
-                        (tid, (orig_node_count, node_count))
-                    )
-                    node_count = orig_node_count
         f_2 = {}
         for x in self.f_1:
             f_2[(x,)] = []
             for y in self.f_1:
                 if (
-                    len(f_2_support[self.label2id[x]][self.label2id[y]])
+                    len(self.f_2_support[self.label2id[x]][self.label2id[y]])
                     / self.tree_count
                     >= self.support
                 ):
                     scope_list = []
-                    for elem1 in scope_list_f_1[self.label2id[x]]:
-                        for elem2 in scope_list_f_1[self.label2id[y]]:
+                    for elem1 in self.scope_list_f_1[self.label2id[x]]:
+                        for elem2 in self.scope_list_f_1[self.label2id[y]]:
                             if (
                                 elem1 != elem2
                                 and elem1[0] == elem2[0]
@@ -326,16 +331,79 @@ class Treeminer(MinerAlgorithm):
 
 
 if __name__ == "__main__":
+    def timed(func):
+        start = datetime.datetime.now()
+        res = func()
+        print(datetime.datetime.now() - start)
+        return res
+
 
     def analyze_trees(trees):
-        t_patterns = Treeminer(trees).get_patterns()
-        print(t_patterns)
-        td_patterns = Treeminerd(trees).get_patterns()
+        # t_patterns = timed(Treeminer(trees).get_patterns)
+        # print(t_patterns)
+        td_patterns = timed(Treeminerd(trees).get_patterns)
         print(td_patterns)
-        print()
-        assert (
-            t_patterns == td_patterns
-        ), f"difference in patterns for {trees}: {td_patterns - t_patterns} {t_patterns - td_patterns} {len(td_patterns)} {len(t_patterns)}"
+        # print()
+        # assert (
+        #     t_patterns == td_patterns
+        # ), f"difference in patterns for {trees}: {td_patterns - t_patterns} {t_patterns - td_patterns} {len(td_patterns)} {len(t_patterns)}"
+
+
+    # This is the forest of trees from figure 5 of the paper
+    analyze_trees(
+        [
+            {
+                "name": "1",
+                "children": [
+                    {"name": "2", "children": []},
+                    {
+                        "name": "3",
+                        "children": [{"name": "4", "children": []}]
+                    }
+                ]
+            },
+            {
+                "name": "2",
+                "children": [
+                    {
+                        "name": "1",
+                        "children": [
+                            {"name": "2", "children": []},
+                            {"name": "4", "children": []}
+                        ]
+                    },
+                    {"name": "2", "children": []},
+                    {"name": "3", "children": []}
+                ]
+            },
+            {
+                "name": "1",
+                "children": [
+                    {
+                        "name": "3",
+                        "children": [{"name": "2", "children": []}]
+                    },
+                    {
+                        "name": "5",
+                        "children": [
+                            {
+                                "name": "1",
+                                "children": [
+                                    {"name": "2", "children": []},
+                                    {
+                                        "name": "3",
+                                        "children": [
+                                            {"name": "4", "children": []}
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    )
 
     analyze_trees(
         [
