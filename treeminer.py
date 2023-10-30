@@ -17,17 +17,31 @@ def to_string_encoding(tree):
         yield -1
 
 
+def numbers_to_string(numbers):
+    result = []
+    for item in numbers:
+        if item == -1:
+            result.append(-1)
+        else:
+            result.append(str(item))
+
+    return result
+
+
 class MinerAlgorithm:
     """
     Abstract class to keep the generic parts of treeminer analyses the same
     """
 
-    def __init__(self, database, support=0.9):
+    def __init__(self, database, support=0.9, to_string=True):
         """
         database: list of trees
         support: minimum frequency of patterns in final solution
         """
-        self.database = list(map(lambda t: list(to_string_encoding(t)), database))
+        if to_string:
+            self.database = list(map(lambda t: list(to_string_encoding(t)), database))
+        else:
+            self.database = database
         self.frequent_patterns = set()
         self.tree_count = len(database)
         atom_occurences = {}

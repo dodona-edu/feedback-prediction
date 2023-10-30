@@ -3,14 +3,12 @@ Module for matching pylint comments to a syntax tree
 """
 from io import StringIO
 import json
-from functools import reduce
-from collections import defaultdict, Counter
+from collections import defaultdict
 from glob import glob
 from typing import List
 
-from treeminer import Treeminerd, to_string_encoding
+from treeminer import Treeminerd
 import pickle
-import sys
 import datetime
 import random
 
@@ -24,6 +22,10 @@ PYTHON = Language("build/languages.so", "python")
 
 parser = Parser()
 parser.set_language(PYTHON)
+
+TRAINING_FILE = "training_filtered_string"
+TEST_FILE = "test_filtered_string"
+PATTERNS_FILE = "patterns_extended_filtered_string"
 
 
 def messages_for_file(filename: str):
@@ -48,10 +50,16 @@ def parse_file(filename):
 def analyze_file(filename):
     tree = parse_file(filename)
 
-    return tree, [(message, line) for line, message in messages_for_file(filename)]
+    # to_remove = ['C0303-trailing-whitespace', 'C0114-missing-module-docstring', 'C0305-trailing-newlines', 'E0001-syntax-error',
+    #              'C0301-line-too-long', 'E0602-undefined-variable', 'W0622-redefined-builtin', 'W0621-redefined-outer-name', 'W0612-unused-variable',
+    #              'W0311-bad-indentation', 'C0103-invalid-name', 'E0601-used-before-assignment']
+    to_remove = []
+
+    return tree, [(message, line) for line, message in messages_for_file(filename) if message not in to_remove]
 
 
 def subtree_on_line(tree, line):
+    # return {"name": tree["name"], "children": list(map(lambda t: subtree_on_line(t, line), filter(lambda t: line in t["lines"], tree["children"])))}
     return {"name": tree["name"], "children": list(map(lambda t: subtree_on_line(t, line), filter(lambda t: len({line - 1, line, line + 1} & t["lines"]) > 0, tree["children"])))}
 
 
@@ -233,7 +241,6 @@ def perform_analysis(files: List[str], save_analysis: bool, load_analysis: bool)
     training = {}
     test = {}
     if not load_analysis:
-        random.seed(314159)
         random.shuffle(files)
         print("Analyzing training data")
         for filename in tqdm(files[:len(files) // 2]):
@@ -242,18 +249,26 @@ def perform_analysis(files: List[str], save_analysis: bool, load_analysis: bool)
         for filename in tqdm(files[len(files) // 2:]):
             test[filename] = analyze_file(filename)
         if save_analysis:
-            with open('output/analysis/training', 'wb') as training_analysis_file:
+            with open(f'output/analysis/{TRAINING_FILE}', 'wb') as training_analysis_file:
                 pickle.dump(training, training_analysis_file, pickle.HIGHEST_PROTOCOL)
-            with open('output/analysis/test', 'wb') as testing_analysis_file:
+            with open(f'output/analysis/{TEST_FILE}', 'wb') as testing_analysis_file:
                 pickle.dump(test, testing_analysis_file, pickle.HIGHEST_PROTOCOL)
     else:
         print("Loading analysis data")
-        with open('output/analysis/training', 'rb') as training_analysis_file:
+        with open(f'output/analysis/{TRAINING_FILE}', 'rb') as training_analysis_file:
             training = pickle.load(training_analysis_file)
-        with open('output/analysis/test', 'rb') as testing_analysis_file:
+        with open(f'output/analysis/{TEST_FILE}', 'rb') as testing_analysis_file:
             test = pickle.load(testing_analysis_file)
 
     return training, test
+
+
+def find_patterns(message, ts):
+    message_patterns = []
+    if len(ts) >= 3:
+        message_patterns = Treeminerd(ts, support=0.8).get_patterns()
+
+    return message, message_patterns
 
 
 def determine_patterns(training, save_patterns: bool, load_patterns: bool):
@@ -266,46 +281,40 @@ def determine_patterns(training, save_patterns: bool, load_patterns: bool):
         subtrees = message_subtrees(training)
         print("Determining patterns for training data")
         patterns = {}
-        for m, ts in tqdm(subtrees.items()):
-            if len(ts) >= 3:
-                message_patterns = Treeminerd(ts, support=0.8).get_patterns()
-                if len(message_patterns) != 0:
-                    patterns[m] = message_patterns
+
+        results = pqdm(list(subtrees.items()), find_patterns, n_jobs=8, argument_type='args')
+        for m, res in results:
+            if len(res) > 0:
+                patterns[m] = res
+
+        # for m, ts in tqdm(subtrees.items()):
+        #     if len(ts) >= 3:
+        #         message_patterns = Treeminerd(ts, support=0.8).get_patterns()
+        #         if len(message_patterns) != 0:
+        #             patterns[m] = message_patterns
         print(f"Total training time: {datetime.datetime.now() - start}")
 
         if save_patterns:
-            with open('output/patterns/patterns', 'wb') as patterns_file:
+            with open(f'output/patterns/{PATTERNS_FILE}', 'wb') as patterns_file:
                 pickle.dump(patterns, patterns_file, pickle.HIGHEST_PROTOCOL)
     else:
         print("Loading patterns data")
-        with open('output/patterns/patterns', 'rb') as patterns_file:
+        with open(f'output/patterns/{PATTERNS_FILE}', 'rb') as patterns_file:
             patterns = pickle.load(patterns_file)
 
     return patterns
 
 
-def main(save_analysis=True, load_analysis=False, save_patterns=True, load_patterns=False):
+def analyze(save_analysis=True, load_analysis=False, save_patterns=True, load_patterns=False):
     files = glob('submissions/*/*/*.py')
-    training, test = perform_analysis(files, save_analysis, load_analysis)
 
+    random.seed(314159)
+
+    training, test = perform_analysis(files, save_analysis, load_analysis)
     patterns = determine_patterns(training, save_patterns, load_patterns)
 
-    print("Testing...")
-    results = pqdm(map(lambda i: (patterns,) + i, test.items()), result_for_file, n_jobs=8, argument_type='args')
-    if not isinstance(results[0], tuple):
-        print(results)
-    total = reduce(lambda a, b: a + b, map(lambda a: a[0], results))
-    first = reduce(lambda a, b: a + b, map(lambda a: a[1], results))
-    first_three = reduce(lambda a, b: a + b, map(lambda a: a[2], results))
-
-    for m in total:
-        print(m, first[m] / total[m], first_three[m] / total[m])
+    return training, test, patterns
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        import doctest
-
-        doctest.testmod()
-    else:
-        main(load_analysis=True, load_patterns=True)
+    analyze(load_analysis=True, load_patterns=False)
