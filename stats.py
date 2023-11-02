@@ -5,28 +5,25 @@ import numpy as np
 from analyze import analyze
 from matcher import test_all_files
 
-STATS_FILE = "stats_one_filtered"
+STATS_FILE = "stats_one_neg"
 
 
-def gather_stats(load_stats=False, save_stats=True):
+def gather_stats(messages, load_stats=False, save_stats=True):
     if load_stats:
         with open(f'output/stats/{STATS_FILE}', 'rb') as stats_file:
             stats = pickle.load(stats_file)
     else:
-        training, test, patterns = analyze(load_analysis=True, load_patterns=True)
-
-        interesting_messages = ['R1714-consider-using-in', 'R1728-consider-using-generator', 'R1720-no-else-raise', 'R1705-no-else-return']
-        # interesting_messages = ['R1710-inconsistent-return-statements', 'R1732-consider-using-with', 'C0200-consider-using-enumerate', 'R0912-too-many-branches']
+        training, test, patterns, pattern_scores = analyze(load_analysis=True, load_patterns=True)
 
         test_for_message = {}
         for file in test:
             for (m, line) in test[file][1]:
-                if m in interesting_messages:
+                if m in messages:
                     if file not in test_for_message:
                         test_for_message[file] = (test[file][0], [])
                     test_for_message[file][1].append((m, line))
 
-        stats = list(test_all_files(test_for_message, patterns, n=5))
+        stats = list(test_all_files(test_for_message, patterns, pattern_scores, n=5))
         if save_stats:
             with open(f'output/stats/{STATS_FILE}', 'wb') as stats_file:
                 pickle.dump(stats, stats_file, pickle.HIGHEST_PROTOCOL)
@@ -58,8 +55,10 @@ def plot_accuracies(stats):
     colors = [(10, 118, 49), (35, 212, 23), (177, 212, 14), (212, 160, 26), (212, 88, 18), (125, 0, 27)]
     colors = list(map(lambda x: (x[0]/256, x[1]/256, x[2]/256), colors))
 
+    bar_titles = [f"{m} ({total[m]})" for m in messages]
+
     for color, (position, counts) in zip(colors, positions.items()):
-        ax.bar(messages, counts, width, label=position, bottom=bottom, color=color)
+        ax.bar(bar_titles, counts, width, label=position, bottom=bottom, color=color)
         bottom += counts
 
     ax.set_title("Percentual positions of messages in matches")
@@ -67,12 +66,16 @@ def plot_accuracies(stats):
 
     plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right')
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[::-1], labels[::-1], loc="center right", bbox_to_anchor=(1.3, 0.78))
+    ax.legend(handles[::-1], labels[::-1], loc="center right", bbox_to_anchor=(1.4, 0.7))
 
     fig.tight_layout()
     plt.show()
 
 
 if __name__ == '__main__':
-    results = gather_stats(load_stats=False, save_stats=False)
+    interesting_messages = ['R1714-consider-using-in', 'R1728-consider-using-generator', 'R1720-no-else-raise', 'R1705-no-else-return']
+    # interesting_messages = ['R1710-inconsistent-return-statements', 'R1732-consider-using-with', 'C0200-consider-using-enumerate',
+    #                         'R0912-too-many-branches']
+
+    results = gather_stats(interesting_messages, load_stats=False, save_stats=False)
     plot_accuracies(results)
