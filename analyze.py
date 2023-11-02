@@ -58,16 +58,39 @@ def analyze_file(filename):
     return tree, [(message, line) for line, message in messages_for_file(filename) if message not in to_remove]
 
 
+def find_subtree_on_line(tree, line):
+    parent = None
+    search_stack = [tree]
+    while parent is None and len(search_stack) > 0:
+        tree = search_stack.pop()
+        for subtree in tree["children"]:
+            lines = subtree["lines"]
+            if line in lines:
+                if sorted(lines)[0] == line:
+                    parent = subtree
+                search_stack.append(subtree)
+                break
+
+    if parent is not None:
+        result = {"name": parent["name"], "children": list(filter(lambda t: line in t["lines"], parent["children"]))}
+        return result
+
+    return None
+
+
 def subtree_on_line(tree, line):
-    # return {"name": tree["name"], "children": list(map(lambda t: subtree_on_line(t, line), filter(lambda t: line in t["lines"], tree["children"])))}
-    return {"name": tree["name"], "children": list(map(lambda t: subtree_on_line(t, line), filter(lambda t: len({line - 1, line, line + 1} & t["lines"]) > 0, tree["children"])))}
+    return {"name": tree["name"], "children": list(map(lambda t: subtree_on_line(t, line), filter(lambda t: line in t["lines"], tree["children"])))}
+    # return {"name": tree["name"], "children": list(map(lambda t: subtree_on_line(t, line), filter(lambda t: len({line - 1, line, line + 1} & t["lines"]) > 0, tree["children"])))}
+    # return find_subtree_on_line(tree, line)
 
 
 def message_subtrees(trees):
     result = defaultdict(list)
     for item in trees.values():
         for m, line in item[1]:
-            result[m].append(subtree_on_line(item[0], line))
+            subtree = subtree_on_line(item[0], line)
+            if subtree is not None:
+                result[m].append(subtree)
     return result
 
 
@@ -78,159 +101,12 @@ def timed(func):
     return res
 
 
-def subtree_matches_2(subtree, pattern):
-    """
-    >>> subtree_matches_2((0, 1, 3, 7, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 2, -1, 1, -1)) # Fig 2
-    False
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 1, -1), (1, 2, -1, 1, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2
-    True
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 4, -1, -1, 4, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2
-    True
-    >>> subtree_matches_2((0, 1, 3, 1, 2, -1, -1, 4, -1, -1, 4, -1, -1, 4, -1), (1, 1, -1, 2, -1))
-    False
-    >>> subtree_matches_2((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1))
-    True
-    >>> subtree_matches_2((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, 2, -1, -1))
-    True
-    >>> subtree_matches_2((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1, 2, -1))
-    False
-    >>> subtree_matches_2((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (0, 1, 2, -1, -1))
-    False
-    >>> subtree_matches_2((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (13,))
-    False
-    >>> subtree_matches_2((1, 2, -1, 3, 4, -1, -1), (1, 2, -1, 4, -1)) # Fig 5 T0
-    True
-    >>> subtree_matches_2((2, 1, 2, -1, 4, -1, -1, 2, -1, 3, -1), (1, 2, -1, 4, -1)) # Fig 5 T1
-    True
-    >>> subtree_matches_2((1, 3, 2, -1, -1, 5, 1, 2, -1, 3, 4, -1, -1, -1, -1), (1, 2, -1, 4, -1)) # Fig 5 T2
-    True
-    >>> subtree_matches_2((0, 1, 2, 3, -1, -1, 2, -1, 4, -1, -1, 1, 2, -1, -1), (0, 1, 3, -1, 4, -1, -1))
-    True
-    >>> subtree_matches_2((0, 1, 2, 3, -1, -1, 2, -1, 5, -1, -1, 1, 4, -1, -1), (0, 1, 3, -1, 4, -1, -1))
-    False
-    """
-    p_i = 0
-    pattern_depth = 0
-    depth = 0
-    depth_stack = []
-    for i, item in enumerate(subtree):
-        if item == -1:
-            if len(depth_stack) > 0 and depth - 1 == depth_stack[-1]:
-                last_depth = depth_stack.pop()
-                if pattern[p_i] != -1 and (last_depth < pattern_depth or len(depth_stack) == 0):
-                    p_i = 0
-            depth -= 1
-        else:
-            if pattern[p_i] == item and item != -1:
-                depth_stack.append(depth)
-            depth += 1
+def get_messages_set(analysis_data):
+    messages_set = set()
+    for (_, items) in analysis_data.values():
+        messages_set.update(item[0] for item in items)
 
-        if pattern[p_i] == item:
-            if item == -1:
-                pattern_depth -= 1
-            else:
-                pattern_depth += 1
-            p_i += 1
-
-        if p_i == len(pattern):
-            return True
-
-    return False
-
-
-def subtree_matches(subtree, pattern):
-    """
-    >>> subtree_matches((0, 1, 3, 7, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 2, -1, 1, -1)) # Fig 2
-    False
-    >>> subtree_matches((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 1, -1), (1, 2, -1, 1, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2
-    True
-    >>> subtree_matches((0, 1, 3, 1, -1, 4, -1, -1, 4, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2
-    True
-    >>> subtree_matches((0, 1, 3, 1, 2, -1, -1, 4, -1, -1, 4, -1, -1, 4, -1), (1, 1, -1, 2, -1))
-    False
-    >>> subtree_matches((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1))
-    True
-    >>> subtree_matches((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, 2))
-    True
-    >>> subtree_matches((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1, 2))
-    False
-    >>> subtree_matches((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (0, 1, 2))
-    False
-    >>> subtree_matches((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (13,))
-    False
-    >>> subtree_matches((1, 2, -1, 3, 4, -1, -1), (1, 2, -1, 4)) # Fig 5 T0
-    True
-    >>> subtree_matches((2, 1, 2, -1, 4, -1, -1, 2, -1, 3, -1), (1, 2, -1, 4)) # Fig 5 T1
-    True
-    >>> subtree_matches((1, 3, 2, -1, -1, 5, 1, 2, -1, 3, 4, -1, -1, -1, -1), (1, 2, -1, 4)) # Fig 5 T2
-    True
-    >>> subtree_matches((0, 1, 2, 3, -1, -1, 2, -1, 4, -1, -1, 1, 2, -1, -1), (0, 1, 3, -1, 4, -1, -1))
-    True
-    >>> subtree_matches((0, 1, 2, 3, -1, -1, 2, -1, 5, -1, -1, 1, 4, -1, -1), (0, 1, 3, -1, 4, -1, -1))
-    False
-    """
-    index = 0
-    depth = 0
-    depth_stack = [0]
-    for atom in pattern:
-        if atom == -1:
-            while index < len(subtree) and depth > depth_stack[-1]:
-                if subtree[index] == -1:
-                    depth -= 1
-                else:
-                    depth += 1
-                index += 1
-            if index == len(subtree):
-                return False
-            del depth_stack[-1]
-        else:
-            while index < len(subtree) and depth > depth_stack[-1] and subtree[index] != atom:
-                if subtree[index] == -1:
-                    depth -= 1
-                else:
-                    depth += 1
-                index += 1
-            if index == len(subtree) or depth < depth_stack[-1]:
-                return False
-            depth_stack.append(depth)
-            index += 1
-            depth += 1
-    return True
-
-
-def most_likely_messages(pattern_collection, subtree):
-    messages = list(pattern_collection.keys())
-    messages.sort(
-        key=lambda m: -len(list(filter(lambda pattern: subtree_matches(subtree, pattern), pattern_collection[m]))) / len(pattern_collection[m]))
-    return messages
-
-
-def result_for_file(patterns, f, messages):
-    total = Counter()
-    first = Counter()
-    first_three = Counter()
-    tree = messages[0]
-    for m, line in messages[1]:
-        subtree = list(to_string_encoding(subtree_on_line(tree, line)))
-        total[m] += 1
-        matched = most_likely_messages(patterns, subtree)
-        if m == matched[0]:
-            first[m] += 1
-        if m in matched[:3]:
-            first_three[m] += 1
-    return total, first, first_three
+    return messages_set
 
 
 def perform_analysis(files: List[str], save_analysis: bool, load_analysis: bool):
@@ -242,12 +118,20 @@ def perform_analysis(files: List[str], save_analysis: bool, load_analysis: bool)
     test = {}
     if not load_analysis:
         random.shuffle(files)
+
         print("Analyzing training data")
         for filename in tqdm(files[:len(files) // 2]):
             training[filename] = analyze_file(filename)
+
+        training_messages = get_messages_set(training)
+
         print("Analyzing test data")
         for filename in tqdm(files[len(files) // 2:]):
-            test[filename] = analyze_file(filename)
+            tree, messages = analyze_file(filename)
+            # If there are messages in test files that are not present in any training files, remove them from the test set
+            messages = list(filter(lambda x: x[0] in training_messages, messages))
+            test[filename] = (tree, messages)
+
         if save_analysis:
             with open(f'output/analysis/{TRAINING_FILE}', 'wb') as training_analysis_file:
                 pickle.dump(training, training_analysis_file, pickle.HIGHEST_PROTOCOL)
@@ -287,22 +171,26 @@ def determine_patterns(training, save_patterns: bool, load_patterns: bool):
             if len(res) > 0:
                 patterns[m] = res
 
-        # for m, ts in tqdm(subtrees.items()):
-        #     if len(ts) >= 3:
-        #         message_patterns = Treeminerd(ts, support=0.8).get_patterns()
-        #         if len(message_patterns) != 0:
-        #             patterns[m] = message_patterns
+        print("Calculating pattern scores")
+        pattern_scores = defaultdict(float)
+        for message_patterns in patterns.values():
+            for pattern in message_patterns:
+                pattern_scores[pattern] += 1
+
+        for pattern in pattern_scores.keys():
+            pattern_scores[pattern] = len(pattern) / pattern_scores[pattern]
+
         print(f"Total training time: {datetime.datetime.now() - start}")
 
         if save_patterns:
             with open(f'output/patterns/{PATTERNS_FILE}', 'wb') as patterns_file:
-                pickle.dump(patterns, patterns_file, pickle.HIGHEST_PROTOCOL)
+                pickle.dump((patterns, pattern_scores), patterns_file, pickle.HIGHEST_PROTOCOL)
     else:
         print("Loading patterns data")
         with open(f'output/patterns/{PATTERNS_FILE}', 'rb') as patterns_file:
-            patterns = pickle.load(patterns_file)
+            patterns, pattern_scores = pickle.load(patterns_file)
 
-    return patterns
+    return patterns, pattern_scores
 
 
 def analyze(save_analysis=True, load_analysis=False, save_patterns=True, load_patterns=False):
@@ -311,9 +199,9 @@ def analyze(save_analysis=True, load_analysis=False, save_patterns=True, load_pa
     random.seed(314159)
 
     training, test = perform_analysis(files, save_analysis, load_analysis)
-    patterns = determine_patterns(training, save_patterns, load_patterns)
+    patterns, pattern_scores = determine_patterns(training, save_patterns, load_patterns)
 
-    return training, test, patterns
+    return training, test, patterns, pattern_scores
 
 
 if __name__ == '__main__':
