@@ -59,20 +59,28 @@ def analyze_file(filename):
 
 
 def find_subtree_on_line(tree, line):
-    parent = None
-    search_stack = [tree]
-    while parent is None and len(search_stack) > 0:
-        tree = search_stack.pop()
-        for subtree in tree["children"]:
+    """
+    Find the subtree that has a root such that 'line' is its first child
+    """
+    root = None
+    while root is None:
+        i = 0
+        children = tree["children"]
+        subtree = None
+        while i < len(children) and tree != subtree:
+            subtree = children[i]
             lines = subtree["lines"]
             if line in lines:
+                tree = subtree
                 if sorted(lines)[0] == line:
-                    parent = subtree
-                search_stack.append(subtree)
-                break
+                    root = subtree
+            i += 1
 
-    if parent is not None:
-        result = {"name": parent["name"], "children": list(filter(lambda t: line in t["lines"], parent["children"]))}
+        if tree != subtree:
+            return None
+
+    if root is not None:
+        result = {"name": root["name"], "children": list(filter(lambda t: line in t["lines"], root["children"]))}
         return result
 
     return None
