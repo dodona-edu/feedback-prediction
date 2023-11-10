@@ -2,18 +2,18 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 
-from analyze import analyze
+from analyze import Analyzer, PylintAnalyzer, FeedbackAnalyzer
 from matcher import test_all_files
 
-STATS_FILE = "stats_one_neg"
+STATS_FILE = ""
 
 
-def gather_stats(messages, load_stats=False, save_stats=True):
+def gather_stats(messages, analyzer: Analyzer, load_stats=False, save_stats=True):
     if load_stats:
         with open(f'output/stats/{STATS_FILE}', 'rb') as stats_file:
             stats = pickle.load(stats_file)
     else:
-        training, test, patterns, pattern_scores = analyze(load_analysis=True, load_patterns=True)
+        training, test, patterns, pattern_scores = analyzer.analyze()
 
         test_for_message = {}
         for file in test:
@@ -77,5 +77,7 @@ if __name__ == '__main__':
     # interesting_messages = ['R1710-inconsistent-return-statements', 'R1732-consider-using-with', 'C0200-consider-using-enumerate',
     #                         'R0912-too-many-branches']
 
-    results = gather_stats(interesting_messages, load_stats=False, save_stats=False)
+    message_analyzer = PylintAnalyzer(load_analysis=True, load_patterns=False, save_patterns=False)
+    STATS_FILE = f"stats_{message_analyzer.PATTERNS_FILE}"
+    results = gather_stats(interesting_messages, message_analyzer, load_stats=False, save_stats=False)
     plot_accuracies(results)

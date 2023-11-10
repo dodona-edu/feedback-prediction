@@ -1,6 +1,7 @@
 /build
-/submissions
+/data
 /output
 /.idea
 __pycache__
 /result.pickle
+/pylint

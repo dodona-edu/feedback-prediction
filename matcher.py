@@ -3,7 +3,7 @@ from collections import Counter
 
 from pqdm.processes import pqdm
 
-from analyze import subtree_on_line, analyze
+from analyze import Analyzer, PylintAnalyzer, subtree_on_line, FeedbackAnalyzer
 from treeminer import numbers_to_string, Treeminerd, to_string_encoding
 from util import list_fully_contains_other_list
 
@@ -128,6 +128,10 @@ def result_for_file(patterns, messages, pattern_scores, n=5):
 
 
 def test_all_files(test, patterns, pattern_scores, n=5):
+    # results = []
+    # for value in tqdm(test.values()):
+    #     result = result_for_file(patterns, value, pattern_scores, n)
+    #     results.append(result)
     results = pqdm(map(lambda i: (patterns, i, pattern_scores, n), test.values()), result_for_file, n_jobs=8, argument_type='args')
     if not isinstance(results[0], tuple):
         print(results)
@@ -159,8 +163,8 @@ def test_one_file(test, patterns, pattern_scores):
     print(result)
 
 
-def main(test_file=None):
-    training, test, patterns, pattern_scores = analyze(load_analysis=True, load_patterns=True)
+def main(analyzer: Analyzer, test_file=None):
+    training, test, patterns, pattern_scores = analyzer.analyze()
 
     print("Testing...")
     if test_file is None:
@@ -171,5 +175,7 @@ def main(test_file=None):
 
 
 if __name__ == '__main__':
-    main()
-    # main(test_file='submissions/exam-group-1-examen-groep-1/Lena Lardinois/centrifuge.py')
+    # message_analyzer = PylintAnalyzer(load_analysis=True, load_patterns=True)
+    message_analyzer = FeedbackAnalyzer(load_analysis=False, save_analysis=False, load_patterns=False, save_patterns=False)
+    main(message_analyzer)
+    # main(message_analyzer, test_file='pylint/submissions/exam-group-1-examen-groep-1/Lena Lardinois/centrifuge.py')
