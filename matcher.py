@@ -5,202 +5,98 @@ from pqdm.processes import pqdm
 
 from analyze import subtree_on_line, analyze
 from treeminer import numbers_to_string, Treeminerd, to_string_encoding
+from util import list_fully_contains_other_list
 
 
-def subtree_matches_3(subtree, pattern):
+def subtree_matches_2_fix(subtree, pattern):
     """
-    >>> subtree_matches_3((0, 1, 3, 7, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2 modified
+    >>> subtree_matches_2_fix((0, 1, 3, 7, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2 modified
     False
-    >>> subtree_matches_3((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 2, -1, 1, -1)) # Fig 2
+    >>> subtree_matches_2_fix((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 2, -1, 1, -1)) # Fig 2
     False
-    >>> subtree_matches_3((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 1, -1), (1, 2, -1, 1, -1)) # Fig 2 modified
+    >>> subtree_matches_2_fix((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 1, -1), (1, 2, -1, 1, -1)) # Fig 2 modified
     False
-    >>> subtree_matches_3((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2
+    >>> subtree_matches_2_fix((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2
     True
-    >>> subtree_matches_3((0, 1, 3, 1, -1, 4, -1, -1, 4, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2 modified
+    >>> subtree_matches_2_fix((0, 1, 3, 1, -1, 4, -1, -1, 4, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2 modified
     False
-    >>> subtree_matches_3((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2
+    >>> subtree_matches_2_fix((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2
     True
-    >>> subtree_matches_3((0, 1, 3, 1, 2, -1, -1, 4, -1, -1, 4, -1, -1, 4, -1), (1, 1, -1, 2, -1))
+    >>> subtree_matches_2_fix((0, 1, 3, 1, 2, -1, -1, 4, -1, -1, 4, -1, -1, 4, -1), (1, 1, -1, 2, -1))
     False
-    >>> subtree_matches_3((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1))
+    >>> subtree_matches_2_fix((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1))
     True
-    >>> subtree_matches_3((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, 2, -1, -1))
+    >>> subtree_matches_2_fix((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, 2, -1, -1))
     True
-    >>> subtree_matches_3((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1, 2, -1))
+    >>> subtree_matches_2_fix((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1, 2, -1))
     False
-    >>> subtree_matches_3((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (0, 1, 2, -1, -1))
+    >>> subtree_matches_2_fix((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (0, 1, 2, -1, -1))
     False
-    >>> subtree_matches_3((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (13,))
+    >>> subtree_matches_2_fix((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (13,))
     False
-    >>> subtree_matches_3((1, 2, -1, 3, 4, -1, -1), (1, 2, -1, 4, -1)) # Fig 5 T0
+    >>> subtree_matches_2_fix((1, 2, -1, 3, 4, -1, -1), (1, 2, -1, 4, -1)) # Fig 5 T0
     True
-    >>> subtree_matches_3((2, 1, 2, -1, 4, -1, -1, 2, -1, 3, -1), (1, 2, -1, 4, -1)) # Fig 5 T1
+    >>> subtree_matches_2_fix((2, 1, 2, -1, 4, -1, -1, 2, -1, 3, -1), (1, 2, -1, 4, -1)) # Fig 5 T1
     True
-    >>> subtree_matches_3((1, 3, 2, -1, -1, 5, 1, 2, -1, 3, 4, -1, -1, -1, -1), (1, 2, -1, 4, -1)) # Fig 5 T2
+    >>> subtree_matches_2_fix((1, 3, 2, -1, -1, 5, 1, 2, -1, 3, 4, -1, -1, -1, -1), (1, 2, -1, 4, -1)) # Fig 5 T2
     True
-    >>> subtree_matches_3((0, 1, 2, 3, -1, -1, 2, -1, 4, -1, -1, 1, 2, -1, -1), (0, 1, 3, -1, 4, -1, -1))
+    >>> subtree_matches_2_fix((0, 1, 2, 3, -1, -1, 2, -1, 4, -1, -1, 1, 2, -1, -1), (0, 1, 3, -1, 4, -1, -1))
     True
-    >>> subtree_matches_3((0, 1, 2, 3, -1, -1, 2, -1, 5, -1, -1, 1, 4, -1, -1), (0, 1, 3, -1, 4, -1, -1))
-    False
-    """
-    if not set(pattern).issubset(subtree):
-        return False
-
-    subtree = numbers_to_string(subtree)
-    pattern = numbers_to_string(pattern)
-    results = Treeminerd([pattern, subtree], 1, False).get_patterns()
-
-    stripped_pattern = pattern[:]
-    while stripped_pattern[-1] == -1:
-        stripped_pattern = stripped_pattern[:-1]
-
-    return tuple(stripped_pattern) in results
-
-
-def subtree_matches_2(subtree, pattern):
-    """
-    >>> subtree_matches_2((0, 1, 3, 7, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 2, -1, 1, -1)) # Fig 2
-    False
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 1, -1), (1, 2, -1, 1, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2
-    True
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 4, -1, -1, 4, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches_2((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2
-    True
-    >>> subtree_matches_2((0, 1, 3, 1, 2, -1, -1, 4, -1, -1, 4, -1, -1, 4, -1), (1, 1, -1, 2, -1))
-    False
-    >>> subtree_matches_2((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1))
-    True
-    >>> subtree_matches_2((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, 2, -1, -1))
-    True
-    >>> subtree_matches_2((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1, 2, -1))
-    False
-    >>> subtree_matches_2((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (0, 1, 2, -1, -1))
-    False
-    >>> subtree_matches_2((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (13,))
-    False
-    >>> subtree_matches_2((1, 2, -1, 3, 4, -1, -1), (1, 2, -1, 4, -1)) # Fig 5 T0
-    True
-    >>> subtree_matches_2((2, 1, 2, -1, 4, -1, -1, 2, -1, 3, -1), (1, 2, -1, 4, -1)) # Fig 5 T1
-    True
-    >>> subtree_matches_2((1, 3, 2, -1, -1, 5, 1, 2, -1, 3, 4, -1, -1, -1, -1), (1, 2, -1, 4, -1)) # Fig 5 T2
-    True
-    >>> subtree_matches_2((0, 1, 2, 3, -1, -1, 2, -1, 4, -1, -1, 1, 2, -1, -1), (0, 1, 3, -1, 4, -1, -1))
-    True
-    >>> subtree_matches_2((0, 1, 2, 3, -1, -1, 2, -1, 5, -1, -1, 1, 4, -1, -1), (0, 1, 3, -1, 4, -1, -1))
+    >>> subtree_matches_2_fix((0, 1, 2, 3, -1, -1, 2, -1, 5, -1, -1, 1, 4, -1, -1), (0, 1, 3, -1, 4, -1, -1))
     False
     """
     if not set(pattern).issubset(subtree):
         return False
 
     pattern_length = len(pattern)
+
+    start = 0
     p_i = 0
     pattern_depth = 0
     depth = 0
     depth_stack = []
-    for i, item in enumerate(subtree):
-        if item == -1:
-            if depth_stack and depth - 1 == depth_stack[-1]:
-                last_depth = depth_stack.pop()
-                if pattern[p_i] != -1 and (last_depth < pattern_depth or not depth_stack):
-                    p_i = 0
-            depth -= 1
-        else:
-            if pattern[p_i] == item and item != -1:
-                depth_stack.append(depth)
-            depth += 1
+    history = []
 
-        if pattern[p_i] == item:
+    def find_in_subtree():
+        nonlocal start, p_i, pattern_depth, depth, depth_stack
+
+        for i, item in enumerate(subtree[start:]):
             if item == -1:
-                pattern_depth -= 1
+                if depth_stack and depth - 1 == depth_stack[-1]:
+                    last_depth = depth_stack.pop()
+                    if pattern[p_i] != -1 and (last_depth < pattern_depth or not depth_stack):
+                        p_i = 0
+                    if pattern[p_i] == -1:
+                        pattern_depth -= 1
+                        p_i += 1
+                depth -= 1
             else:
-                pattern_depth += 1
-            p_i += 1
+                if pattern[p_i] == item:
+                    history.append((start + i + 1, depth + 1, depth_stack[:], pattern_depth, p_i))
+                    depth_stack.append(depth)
+                    pattern_depth += 1
+                    p_i += 1
 
-        if p_i == pattern_length:
-            return True
+                depth += 1
 
-    return False
+            if p_i == pattern_length:
+                return True
 
-
-def subtree_matches(subtree, pattern):
-    """
-    >>> subtree_matches((0, 1, 3, 7, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 2, -1, 1, -1)) # Fig 2
-    False
-    >>> subtree_matches((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 1, -1), (1, 2, -1, 1, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2
-    True
-    >>> subtree_matches((0, 1, 3, 1, -1, 4, -1, -1, 4, -1, -1, 2, -1), (1, 1, -1, 2, -1)) # Fig 2 modified
-    False
-    >>> subtree_matches((0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1)) # Fig 2
-    True
-    >>> subtree_matches((0, 1, 3, 1, 2, -1, -1, 4, -1, -1, 4, -1, -1, 4, -1), (1, 1, -1, 2, -1))
-    False
-    >>> subtree_matches((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1))
-    True
-    >>> subtree_matches((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, 2))
-    True
-    >>> subtree_matches((1, 1, 2, -1, -1, 1, 2, -1, -1), (1, 1, -1, 1, -1, 2))
-    False
-    >>> subtree_matches((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (0, 1, 2))
-    False
-    >>> subtree_matches((0, 3, 4, -1, 5, -1, 6, 7, -1, 8, -1, 2, -1, -1, 9, -1, 1, 10, 11, 12, -1, -1, -1, -1, -1), (13,))
-    False
-    >>> subtree_matches((1, 2, -1, 3, 4, -1, -1), (1, 2, -1, 4)) # Fig 5 T0
-    True
-    >>> subtree_matches((2, 1, 2, -1, 4, -1, -1, 2, -1, 3, -1), (1, 2, -1, 4)) # Fig 5 T1
-    True
-    >>> subtree_matches((1, 3, 2, -1, -1, 5, 1, 2, -1, 3, 4, -1, -1, -1, -1), (1, 2, -1, 4)) # Fig 5 T2
-    True
-    >>> subtree_matches((0, 1, 2, 3, -1, -1, 2, -1, 4, -1, -1, 1, 2, -1, -1), (0, 1, 3, -1, 4, -1, -1))
-    True
-    >>> subtree_matches((0, 1, 2, 3, -1, -1, 2, -1, 5, -1, -1, 1, 4, -1, -1), (0, 1, 3, -1, 4, -1, -1))
-    False
-    """
-    if not set(pattern).issubset(subtree):
         return False
 
-    index = 0
-    depth = 0
-    depth_stack = [0]
-    for atom in pattern:
-        if atom == -1:
-            while index < len(subtree) and depth > depth_stack[-1]:
-                if subtree[index] == -1:
-                    depth -= 1
-                else:
-                    depth += 1
-                index += 1
-            if index == len(subtree):
-                return False
-            del depth_stack[-1]
-        else:
-            while index < len(subtree) and depth > depth_stack[-1] and subtree[index] != atom:
-                if subtree[index] == -1:
-                    depth -= 1
-                else:
-                    depth += 1
-                index += 1
-            if index == len(subtree) or depth < depth_stack[-1]:
-                return False
-            depth_stack.append(depth)
-            index += 1
-            depth += 1
-    return True
+    result = find_in_subtree()
+    while not result and history:
+        start, depth, depth_stack, pattern_depth, p_i = history.pop()
+        # Subtree needs to contain all items from pattern
+        if len(pattern) - p_i <= len(subtree) - start and list_fully_contains_other_list(subtree[start:], pattern[p_i:]):
+            result = find_in_subtree()
+
+    return result
 
 
 def most_likely_messages(pattern_collection, pattern_scores, subtree):
-
     def match_percentage(m):
-        matches = list(filter(lambda pattern: subtree_matches_2(subtree, pattern), pattern_collection[m]))
+        matches = list(filter(lambda pattern: subtree_matches_2_fix(subtree, pattern), pattern_collection[m]))
         matches_score = sum(pattern_scores[match] for match in matches)
         total = len(pattern_collection[m])
         return matches_score / total, f"{matches_score}/{total}"
