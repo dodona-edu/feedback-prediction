@@ -89,6 +89,8 @@ class Analyzer(ABC):
         self.save_patterns = save_patterns
         self.load_patterns = load_patterns
 
+        self.filter_test = True  # Whether to filter the test set or not. This will remove all messages from the test set for which no pattern was found.
+
         self.files: List[str] = []
 
     def map_tree(self, node):
@@ -137,8 +139,9 @@ class Analyzer(ABC):
             print("Analyzing test data")
             for filename in tqdm(files[len(files) // 2:]):
                 tree, messages = self.analyze_file(filename)
-                # If there are messages in test files that are not present in any training files, remove them from the test set
-                messages = list(filter(lambda x: x[0] in training_messages, messages))
+                if self.filter_test:
+                    # If there are messages in test files that are not present in any training files, remove them from the test set
+                    messages = list(filter(lambda x: x[0] in training_messages, messages))
                 test[filename] = (tree, messages)
 
             if self.save_analysis:
@@ -211,9 +214,10 @@ class Analyzer(ABC):
         training, test = self.perform_analysis(self.files)
         patterns, pattern_scores = self.determine_patterns(training)
 
-        # Filter our the messages for which no pattern was found
-        # for file in test.keys():
-        #     test[file] = (test[file][0], [(m, line) for m, line in test[file][1] if m in patterns.keys()])
+        if self.filter_test:
+            # Filter our the messages for which no pattern was found
+            for file in test.keys():
+                test[file] = (test[file][0], [(m, line) for m, line in test[file][1] if m in patterns.keys()])
 
         return training, test, patterns, pattern_scores
 
