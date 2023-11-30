@@ -31,7 +31,16 @@ def gather_stats(messages, analyzer: Analyzer, load_stats=False, save_stats=True
     return stats
 
 
-def plot_accuracies(stats):
+def determine_training_totals(training):
+    total = Counter()
+    for (_, messages) in training.values():
+        for m in messages:
+            total[m[0]] += 1
+
+    return total
+
+
+def plot_accuracies(stats, total_training):
     total, first_n, total_first_n = stats
 
     messages = [m for m in total]
@@ -52,10 +61,7 @@ def plot_accuracies(stats):
     fig, ax = plt.subplots()
     bottom = np.zeros(len(messages))
 
-    colors = [(10, 118, 49), (35, 212, 23), (177, 212, 14), (212, 160, 26), (212, 88, 18), (125, 0, 27)]
-    colors = list(map(lambda x: (x[0]/256, x[1]/256, x[2]/256), colors))
-
-    bar_titles = [f"{m} ({total[m]})" for m in messages]
+    bar_titles = [f"{m} ({total_training[m]};{total[m]})" for m in messages]
 
     for color, (position, counts) in zip(colors, positions.items()):
         ax.bar(bar_titles, counts, width, label=position, bottom=bottom, color=color)
