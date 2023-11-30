@@ -92,7 +92,7 @@ class Analyzer(ABC):
         self.files: List[str] = []
 
     def map_tree(self, node):
-        children = [self.map_tree(child) for child in node.children]
+        children = [self.map_tree(child) for child in node.children if node.type != "comment"]
         name = node.text.decode("utf-8") if node.type == "identifier" else node.type
         lines = set(range(node.start_point[0], node.end_point[0] + 1))
         # TODO hier sorted(lines) ipv in find_subtree_on_line() als beslist zou worden om sowieso subtree_on_line te gebruiken
