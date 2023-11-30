@@ -1,11 +1,15 @@
 import pickle
+from collections import Counter
+from glob import glob
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from analyze import Analyzer, PylintAnalyzer, FeedbackAnalyzer
 from matcher import test_all_files
 
-STATS_FILE = ""
+colors = [(10, 118, 49), (35, 212, 23), (177, 212, 14), (212, 160, 26), (212, 88, 18), (125, 0, 27)]
+colors = list(map(lambda x: (x[0] / 256, x[1] / 256, x[2] / 256), colors))
 
 
 def gather_stats(messages, analyzer: Analyzer, load_stats=False, save_stats=True):
@@ -80,9 +84,25 @@ def plot_accuracies(stats, total_training):
     ax.legend(handles[::-1], labels[::-1], loc="center right", bbox_to_anchor=(1.5, 0.7))
 
     fig.tight_layout()
-    plt.show()
     plt.savefig('output/plots/saved_plot.png', bbox_inches='tight')
     # fig.show()
+
+
+def plot_global_accuracies(stats, file_name="plot"):
+    total_per_message, first_n_per_message, total_first_n_per_message = stats
+
+    total = sum(total_per_message.values())
+    percentages = [sum(value.values()) / total for value in first_n_per_message]
+    percentages.append(1 - sum(percentages))
+
+    labels = ['first', 'second', 'third', 'fourth', 'fifth', 'other']
+
+    plt.pie(percentages, autopct='%1.1f%%', colors=colors, pctdistance=1.17, startangle=180, counterclock=False)
+    plt.legend(labels, loc="upper right", bbox_to_anchor=(1.2, 1))
+    plt.title(f'Positions of messages in matches (#tm={len(total_per_message.keys())})', pad=10)  # #tm = amount of different test messages
+    plt.savefig(f'output/plots/{file_name}.png', bbox_inches='tight')
+
+
 
 
 if __name__ == '__main__':
