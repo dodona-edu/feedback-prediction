@@ -67,15 +67,22 @@ def plot_accuracies(stats, total_training):
         ax.bar(bar_titles, counts, width, label=position, bottom=bottom, color=color)
         bottom += counts
 
-    ax.set_title("Percentual positions of messages in matches")
-    plt.suptitle(STATS_FILE)
+    ax.set_title("Positions of messages in matches", pad=20)
+    # plt.suptitle(STATS_FILE)
 
-    plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right')
+    plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right', clip_on=True)
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[::-1], labels[::-1], loc="center right", bbox_to_anchor=(1.4, 0.7))
+
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.95, box.height])
+
+    ax.legend(handles[::-1], labels[::-1], loc="center right", bbox_to_anchor=(1.5, 0.7))
 
     fig.tight_layout()
     plt.show()
+    plt.savefig('output/plots/saved_plot.png', bbox_inches='tight')
+    # fig.show()
 
 
 if __name__ == '__main__':
