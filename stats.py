@@ -103,6 +103,19 @@ def plot_global_accuracies(stats, file_name="plot"):
     plt.savefig(f'output/plots/{file_name}.png', bbox_inches='tight')
 
 
+def main_feedback(exercise_ids=None):
+    message_analyzer = FeedbackAnalyzer(load_analysis=False, save_analysis=False, load_patterns=False, save_patterns=False)
+    if exercise_ids is not None:
+        for exercise_id in exercise_ids:
+            print(f"Results for excercise with ID {exercise_id}")
+            message_analyzer.load_files(glob(f'data/excercises/{exercise_id}/*.py'))
+            stats = gather_stats(message_analyzer, save_stats=False)
+            plot_global_accuracies(stats, file_name=exercise_id)
+            plt.clf()
+
+    else:
+        stats = gather_stats(message_analyzer, load_stats=False, save_stats=False)
+        plot_global_accuracies(stats, file_name="plot2")
 
 
 if __name__ == '__main__':
