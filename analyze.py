@@ -120,11 +120,13 @@ class Analyzer(ABC):
 
         return messages_set
 
-    def perform_analysis(self, files: List[str]):
+    def perform_analysis(self):
         """
         Split the files into training and testing files,
         and analyze them by parsing them and adding messages.
         """
+        files = self.files
+
         training = {}
         test = {}
         if not self.load_analysis:
@@ -211,7 +213,7 @@ class Analyzer(ABC):
     def analyze(self):
         random.seed(314159)
 
-        training, test = self.perform_analysis(self.files)
+        training, test = self.perform_analysis()
         patterns, pattern_scores = self.determine_patterns(training)
 
         if self.filter_test:
@@ -255,13 +257,11 @@ class FeedbackAnalyzer(Analyzer):
         self.TEST_FILE = "test"
         self.PATTERNS_FILE = "patterns_smallsub_pos_neg"
 
-        self.files = glob('data/excercises/*/*.py')
         self.annotations_file = "data/annotations.tsv"
 
         self.submission_annotations_map = defaultdict(list)
         self.load_submission_annotations_map()
-
-        self.files = [file for file in self.files if file.split('/')[-1].split('.')[0] in self.submission_annotations_map.keys()]
+        self.load_files(glob('data/excercises/*/*.py'))
 
     def load_submission_annotations_map(self):
         with open(self.annotations_file) as annotations_file:
@@ -274,6 +274,9 @@ class FeedbackAnalyzer(Analyzer):
     def messages_for_file(self, file: str):
         submission_id = file.split('/')[-1].split('.')[0]
         return self.submission_annotations_map[submission_id]
+
+    def load_files(self, files):
+        self.files = [file for file in files if file.split('/')[-1].split('.')[0] in self.submission_annotations_map.keys()]
 
 
 if __name__ == '__main__':
