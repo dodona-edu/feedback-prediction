@@ -103,6 +103,17 @@ def plot_global_accuracies(stats, file_name="plot"):
     plt.savefig(f'output/plots/{file_name}.png', bbox_inches='tight')
 
 
+
+def main_pylint(interesting_messages):
+    message_analyzer = PylintAnalyzer(load_analysis=True, load_patterns=False, save_analysis=False, save_patterns=False)
+    results = gather_stats(message_analyzer, messages=interesting_messages, load_stats=False, save_stats=False)
+    if len(interesting_messages) > 0:
+        training_totals = determine_training_totals(message_analyzer.perform_analysis()[0])
+        plot_accuracies(results, training_totals)
+    else:
+        plot_global_accuracies(results)
+
+
 def main_feedback(exercise_ids=None):
     message_analyzer = FeedbackAnalyzer(load_analysis=False, save_analysis=False, load_patterns=False, save_patterns=False)
     if exercise_ids is not None:
