@@ -12,7 +12,9 @@ colors = [(10, 118, 49), (35, 212, 23), (177, 212, 14), (212, 160, 26), (212, 88
 colors = list(map(lambda x: (x[0] / 256, x[1] / 256, x[2] / 256), colors))
 
 
-def gather_stats(messages, analyzer: Analyzer, load_stats=False, save_stats=True):
+def gather_stats(analyzer: Analyzer, messages=None, load_stats=False, save_stats=True):
+    stats_file_name = f"stats_{analyzer.PATTERNS_FILE}"
+
     if load_stats:
         with open(f'output/stats/{STATS_FILE}', 'rb') as stats_file:
             stats = pickle.load(stats_file)
@@ -20,12 +22,15 @@ def gather_stats(messages, analyzer: Analyzer, load_stats=False, save_stats=True
         training, test, patterns, pattern_scores = analyzer.analyze()
 
         test_for_message = {}
-        for file in test:
-            for (m, line) in test[file][1]:
-                if m in messages:
-                    if file not in test_for_message:
-                        test_for_message[file] = (test[file][0], [])
-                    test_for_message[file][1].append((m, line))
+        if messages is not None:
+            for file in test:
+                for (m, line) in test[file][1]:
+                    if m in messages:
+                        if file not in test_for_message:
+                            test_for_message[file] = (test[file][0], [])
+                        test_for_message[file][1].append((m, line))
+        else:
+            test_for_message = test
 
         stats = list(test_all_files(test_for_message, patterns, pattern_scores, n=5))
         if save_stats:
@@ -130,11 +135,22 @@ def main_feedback(exercise_ids=None):
 
 
 if __name__ == '__main__':
-    interesting_messages = ['R1714-consider-using-in', 'R1728-consider-using-generator', 'R1720-no-else-raise', 'R1705-no-else-return']
+    # interesting_messages = None
+    # interesting_messages = ['R1714-consider-using-in', 'R1728-consider-using-generator', 'R1720-no-else-raise', 'R1705-no-else-return']
     # interesting_messages = ['R1710-inconsistent-return-statements', 'R1732-consider-using-with', 'C0200-consider-using-enumerate',
     #                         'R0912-too-many-branches']
 
-    message_analyzer = PylintAnalyzer(load_analysis=True, load_patterns=False, save_patterns=False)
-    STATS_FILE = f"stats_{message_analyzer.PATTERNS_FILE}"
-    results = gather_stats(interesting_messages, message_analyzer, load_stats=False, save_stats=False)
-    plot_accuracies(results)
+    # message_analyzer = PylintAnalyzer(load_analysis=True, load_patterns=False, save_analysis=False, save_patterns=False)
+    # message_analyzer = FeedbackAnalyzer(load_analysis=False, save_analysis=False, load_patterns=False, save_patterns=False)
+    # results = gather_stats(message_analyzer, messages=interesting_messages, load_stats=False, save_stats=False)
+    # if len(interesting_messages) > 0:
+    #     training_totals = determine_training_totals(message_analyzer.perform_analysis()[0])
+    #     plot_accuracies(results, training_totals)
+    # else:
+    #     plot_global_accuracies(results)
+
+    ids = None
+    # ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
+    main_feedback(ids)
+    # for eid in ids:
+    #     plot_simulation(eid)
