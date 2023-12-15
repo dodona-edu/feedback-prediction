@@ -3,6 +3,7 @@ Module containing treeminer implementation.
 """
 import datetime
 from collections import defaultdict
+from src.util import visualise_parse_tree
 
 
 def to_string_encoding(tree):
