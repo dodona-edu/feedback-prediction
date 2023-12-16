@@ -29,11 +29,18 @@ def get_not_seen_count(train_messages: Set[str], total_per_message: Counter) -> 
     return not_seen_count
 
 
-def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], List[List[int]], List[List[int]]]:
+def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], Dict[str, List[int]], List[int]]:
     set_sizes = []  # Strings of amount of files in (train, test) set
     totals = []
     match_counts = [[], [], [], []]
     annotation_counts = [[], []]
+    match_counts = {
+        "First": [],
+        "Top 5": [],
+        "Out of top 5": [],
+        "Not yet seen": []
+    }
+    unique_training_counts = []
 
     model = FeedbackModel()
 
@@ -53,49 +60,47 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], L
 
         total = sum(total_per_message.values())
         train_messages = get_messages(training)
-        test_messages = get_messages(test)
 
         first_count = sum(first_n_per_message[0].values())
         first_n_count = sum(total_first_n_per_message.values()) - first_count
         not_seen_count = get_not_seen_count(train_messages, total_per_message)
         failed_count = total - not_seen_count - first_count - first_n_count
 
-        match_counts[0].insert(0, first_count)
-        match_counts[1].insert(0, first_n_count)
-        match_counts[2].insert(0, failed_count)
-        match_counts[3].insert(0, not_seen_count)
+        match_counts["First"].append(first_count)
+        match_counts["Top 5"].append(first_n_count)
+        match_counts["Out of top 5"].append(failed_count)
+        match_counts["Not yet seen"].append(not_seen_count)
 
-        annotation_counts[0].insert(0, len(train_messages))
-        annotation_counts[1].insert(0, len(test_messages))
+        unique_training_counts.append(len(train_messages))
 
-        set_sizes.insert(0, str((len(training), len(test))))
-        totals.insert(0, total)
+        set_sizes.append(str((len(training), len(test))))
+        totals.append(total)
 
-    return set_sizes, totals, match_counts, annotation_counts
+    return set_sizes, totals, match_counts, unique_training_counts
 
 
-def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], List[List[int]], List[List[int]]], file_name: str = "simulate"):
-    bar_titles, totals, match_counts, annotation_counts = stats
+def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List[int]], List[int]], file_name: str = "simulate"):
+    bar_titles, totals, match_counts, unique_training_counts = stats
 
     px = 1/plt.rcParams['figure.dpi']
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(1280 * px, 960 * px), gridspec_kw={'width_ratios': [3, 1]})
 
-    match_stats = [[count / total for count, total in zip(match_counts[i], totals)] for i in range(len(match_counts))]
+    colors = [
+        COLORS["DARK GREEN"],
+        COLORS["LIGHT GREEN"],
+        COLORS["DARK RED"],
+        COLORS["LIGHT ORANGE"]
+    ]
 
     left = np.zeros(len(bar_titles))
-    ax1.barh(bar_titles, match_stats[0], label="First", left=left, color=COLORS[0])
-    left += match_stats[0]
-    ax1.barh(bar_titles, match_stats[1], label="Top 5", left=left, color=COLORS[1])
-    left += match_stats[1]
-    ax1.barh(bar_titles, match_stats[2], label="Out of top 5", left=left, color=COLORS[-1])
-    left += match_stats[2]
-    ax1.barh(bar_titles, match_stats[3], label="Not yet seen", left=left, color=COLORS[3])
+    for (bar_label, counts), color in zip(match_counts.items(), colors):
+        percentages = [count / total for (count, total) in zip(counts, totals)]
+        ax1.barh(bar_titles, percentages, label=bar_label, left=left, color=color)
+        left += percentages
 
-    n = len(match_counts[0])
-    for i, bar in enumerate(ax1.patches):
-        match_count = match_counts[i // n][i % n]
-        if match_count > 0:
-            ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_y() + bar.get_height() / 2, match_count)
+    for bars, counts in zip(ax1.containers, match_counts.values()):
+        labels = [c if c > 0 else "" for c in counts]
+        ax1.bar_label(bars, labels, label_type='center', color='white')
 
     fig.suptitle(f"Simulation of exercise {e_id}")
     ax1.set_xlim([0, 1])
@@ -103,24 +108,20 @@ def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], List[List[int]
     ax1.set_xlabel("Percentage of messages")
     ax1.set_ylabel("Amount of files in (train, test) sets", rotation=0, horizontalalignment='left', y=1.02)
 
+    ax1.invert_yaxis()
     ax1.legend(bbox_to_anchor=(1, 1.13))
 
-    left = np.zeros(len(bar_titles))
-    ax2.barh(bar_titles, annotation_counts[0], label="Train messages", left=left)
-    left += annotation_counts[0]
-    ax2.barh(bar_titles, annotation_counts[1], label="Test messages", left=left)
+    ax2.barh(bar_titles, unique_training_counts)
 
+    max_count = max(unique_training_counts)
     ax2.set_yticks([])
-    max_count = 0
-    for i in range(len(annotation_counts[0])):
-        count = annotation_counts[0][i] + annotation_counts[1][i]
-        if count > max_count:
-            max_count = count
     ax2.set_xlim([0, max_count])
+    ticks = [i for i in range(0, max_count, 10 if max_count >= 20 else 5)]
+    ax2.set_xticks([*ticks, max_count])
 
-    ax2.set_xlabel("Amount of unique messages")
+    ax2.set_xlabel("Unique messages in train")
 
-    ax2.legend(bbox_to_anchor=(1, 1.1))
+    ax2.invert_yaxis()
 
     fig.tight_layout()
     plt.savefig(f'{ROOT_DIR}/output/plots/{file_name}.png', bbox_inches='tight')
