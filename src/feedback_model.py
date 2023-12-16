@@ -9,7 +9,7 @@ from tqdm import tqdm
 from src.custom_types import FeedbackTree, Tree, FilteredTree, HorizontalTree
 from src.util import to_string_encoding
 from src.treeminer import Treeminerd
-from util import list_fully_contains_other_list
+from src.util import list_fully_contains_other_list
 
 
 class FeedbackModel:
