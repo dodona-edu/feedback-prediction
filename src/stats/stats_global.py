@@ -50,7 +50,7 @@ def main_feedback(exercise_ids: List[str] = None):
         for exercise_id in exercise_ids:
             print(f"Results for excercise with ID {exercise_id}")
             message_analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/{exercise_id}/*.py'))
-            plot_global_accuracies(message_analyzer, file_name=f"_{exercise_id}", eid=exercise_id)
+            plot_global_accuracies(message_analyzer, file_name=f"{exercise_id}", eid=exercise_id)
             plt.clf()
 
     else:
