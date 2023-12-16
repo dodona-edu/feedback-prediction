@@ -72,7 +72,16 @@ def plot_accuracies_for_messages(analyzer: Analyzer, messages: List[str], load_s
 
     bar_titles = [f"{m} ({total_training[m]};{total[m]})" for m in messages]
 
-    for color, (position, counts) in zip(COLORS, positions.items()):
+    colors = [
+        COLORS["DARK GREEN"],
+        COLORS["LIGHT GREEN"],
+        COLORS["LIGHT YELLOW"],
+        COLORS["LIGHT ORANGE"],
+        COLORS["DARK ORANGE"],
+        COLORS["DARK RED"]
+    ]
+
+    for color, (position, counts) in zip(colors, positions.items()):
         ax.bar(bar_titles, counts, width, label=position, bottom=bottom, color=color)
         bottom += counts
 

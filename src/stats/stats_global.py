@@ -22,7 +22,16 @@ def plot_global_accuracies(analyzer: Analyzer, file_name="plot", eid=None):
 
     labels_list = ['first', 'second', 'third', 'fourth', 'fifth', 'other']
 
-    patches, _ = plt.pie(percentages, colors=COLORS, pctdistance=1.17, startangle=180, counterclock=False,
+    colors = [
+        COLORS["DARK GREEN"],
+        COLORS["LIGHT GREEN"],
+        COLORS["LIGHT YELLOW"],
+        COLORS["LIGHT ORANGE"],
+        COLORS["DARK ORANGE"],
+        COLORS["DARK RED"]
+    ]
+
+    patches, _ = plt.pie(percentages, colors=colors, pctdistance=1.17, startangle=180, counterclock=False,
                          wedgeprops={'linewidth': 1, 'edgecolor': 'k'} if 1.0 not in percentages else None)
     labels = [f'{label} - {percentage * 100:.2f}%' for label, percentage in zip(labels_list, percentages)]
     plt.legend(labels, loc="upper right", bbox_to_anchor=(1.4, 1))

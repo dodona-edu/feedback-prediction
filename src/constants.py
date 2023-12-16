@@ -1,8 +1,13 @@
 from pathlib import Path
 
-
-COLORS = [(10, 118, 49), (35, 212, 23), (177, 212, 14), (212, 160, 26), (212, 88, 18), (125, 0, 27)]
-COLORS = list(map(lambda x: (x[0] / 256, x[1] / 256, x[2] / 256), COLORS))
+COLORS = {
+    "DARK GREEN": "#0A7631",
+    "LIGHT GREEN": "#23d417",
+    "LIGHT YELLOW": "#b1d40e",
+    "LIGHT ORANGE": "#d4a01a",
+    "DARK ORANGE": "#d45812",
+    "DARK RED": "#7d001b"
+}
 
 ROOT_DIR = Path(__file__).parent.parent
 
