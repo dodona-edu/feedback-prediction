@@ -1,5 +1,5 @@
 from collections import Counter
-from typing import List, Iterator
+from typing import List, Iterator, Sequence
 
 import pydot
 
@@ -19,7 +19,7 @@ def to_string_encoding(tree: FilteredTree) -> Iterator[str | int]:
         yield -1
 
 
-def list_fully_contains_other_list(list1: List, list2: List) -> bool:
+def sequence_fully_contains_other_sequence(list1: Sequence, list2: Sequence) -> bool:
     """
     Return True if list1 fully contains all items (with duplicates) form list2
     Source: https://stackoverflow.com/questions/68390939/how-to-check-if-a-list-contains-all-the-elements-of-another-list-including-dupli

@@ -9,7 +9,7 @@ from tqdm import tqdm
 from src.custom_types import FeedbackTree, Tree, FilteredTree, HorizontalTree
 from src.util import to_string_encoding
 from src.treeminer import Treeminerd
-from src.util import list_fully_contains_other_list
+from src.util import sequence_fully_contains_other_sequence
 
 
 class FeedbackModel:
@@ -198,7 +198,7 @@ class FeedbackModel:
         while not result and history:
             start, depth, depth_stack, pattern_depth, p_i = history.pop()
             # Subtree needs to contain all items from pattern
-            if len(pattern) - p_i <= len(subtree) - start and list_fully_contains_other_list(subtree[start:], pattern[p_i:]):
+            if len(pattern) - p_i <= len(subtree) - start and sequence_fully_contains_other_sequence(subtree[start:], pattern[p_i:]):
                 result = find_in_subtree()
 
         return result
