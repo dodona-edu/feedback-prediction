@@ -3,6 +3,7 @@ from typing import List, Iterator
 
 import pydot
 
+from src.constants import ROOT_DIR
 from src.custom_types import FilteredTree, Tree, HorizontalTree
 
 
@@ -41,7 +42,7 @@ def visualise_parse_tree(tree: Tree | HorizontalTree, is_string_encoding=False, 
     else:
         visualise_subtree(graph, tree, [0], with_lines)
     output_graphviz_dot = graph.to_string()
-    with open(f'output/dots/{file_name}.dot', 'w') as file:
+    with open(f'{ROOT_DIR}/output/dots/{file_name}.dot', 'w') as file:
         file.write(output_graphviz_dot)
 
 
