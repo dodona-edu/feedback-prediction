@@ -29,15 +29,23 @@ def get_not_seen_count(train_messages: Set[str], total_per_message: Counter) -> 
     return not_seen_count
 
 
+def get_no_patterns_count(model: FeedbackModel, train_messages, total_per_message: Counter) -> int:
+    no_patterns_count = 0
+    for (m, count) in total_per_message.items():
+        if m in train_messages and m not in model.patterns:
+            no_patterns_count += count
+
+    return no_patterns_count
+
+
 def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], Dict[str, List[int]], List[int]]:
     set_sizes = []  # Strings of amount of files in (train, test) set
     totals = []
-    match_counts = [[], [], [], []]
-    annotation_counts = [[], []]
     match_counts = {
         "First": [],
         "Top 5": [],
         "Out of top 5": [],
+        "No patterns found": [],
         "Not yet seen": []
     }
     unique_training_counts = []
@@ -64,11 +72,13 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
         first_count = sum(first_n_per_message[0].values())
         first_n_count = sum(total_first_n_per_message.values()) - first_count
         not_seen_count = get_not_seen_count(train_messages, total_per_message)
-        failed_count = total - not_seen_count - first_count - first_n_count
+        no_patterns_count = get_no_patterns_count(model, train_messages, total_per_message)
+        failed_count = total - first_count - first_n_count - not_seen_count - no_patterns_count
 
         match_counts["First"].append(first_count)
         match_counts["Top 5"].append(first_n_count)
         match_counts["Out of top 5"].append(failed_count)
+        match_counts["No patterns found"].append(no_patterns_count)
         match_counts["Not yet seen"].append(not_seen_count)
 
         unique_training_counts.append(len(train_messages))
@@ -89,6 +99,7 @@ def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List
         COLORS["DARK GREEN"],
         COLORS["LIGHT GREEN"],
         COLORS["DARK RED"],
+        COLORS["GRAY"],
         COLORS["LIGHT ORANGE"]
     ]
 
@@ -102,14 +113,14 @@ def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List
         labels = [c if c > 0 else "" for c in counts]
         ax1.bar_label(bars, labels, label_type='center', color='white')
 
-    fig.suptitle(f"Simulation of exercise {e_id}")
+    ax1.set_title(f"Simulation of exercise {e_id}", pad=50)
     ax1.set_xlim([0, 1])
 
     ax1.set_xlabel("Percentage of messages")
-    ax1.set_ylabel("Amount of files in (train, test) sets", rotation=0, horizontalalignment='left', y=1.02)
+    ax1.set_ylabel("Files in (train, test) sets", rotation=0, horizontalalignment='left', y=1.02)
 
     ax1.invert_yaxis()
-    ax1.legend(bbox_to_anchor=(1, 1.13))
+    ax1.legend(loc='upper right', bbox_to_anchor=(1, 1.05), ncols=5)
 
     ax2.barh(bar_titles, unique_training_counts)
 
