@@ -148,7 +148,7 @@ class Treeminerd(MinerAlgorithm):
                                 elem1 != elem3
                                 and elem2 != elem3
                                 and elem1[-1][0] <= elem3[-1][0] <= elem2[-1][0]
-                                and elem1[-1][1] >= elem3[-1][1] >= elem3[-1][1]
+                                and elem1[-1][1] >= elem3[-1][1] >= elem2[-1][1]
                             ):
                                 should_add = False
                         if should_add:
