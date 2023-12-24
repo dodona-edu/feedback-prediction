@@ -100,31 +100,6 @@ class MinerAlgorithm:
                     })
                     node_count = orig_node_count
 
-    def save_id_db_to_file(self):
-        """
-        # TODO improve method, better way to handle filtered out labels?
-        Transform the tree database to it's corresponding list of ids
-        """
-        label2id = self.label2id
-        max_len = 0
-        with open("output/id_db", "w") as file:
-            for i, tree in enumerate(self.database):
-                id_tree = []
-                for item in tree:
-                    if item != -1:
-                        if item not in label2id.keys():
-                            new_id = max(label2id.values()) + 1
-                            label2id[item] = new_id
-                        id_tree.append(str(label2id[item]))
-                    else:
-                        id_tree.append(str(item))
-                if len(id_tree) > max_len:
-                    max_len = len(id_tree)
-                encoding = ' '.join(id_tree)
-                file.write(f"{i} {i} {len(tree)} {encoding}\n")
-
-            print(f"Maxium id-tree length: {max_len}")
-
 
 class Treeminerd(MinerAlgorithm):
     """
