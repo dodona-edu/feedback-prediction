@@ -3,10 +3,13 @@ Module containing treeminer implementation.
 """
 import datetime
 from collections import defaultdict
+from typing import List, Set, Iterator, Dict, Tuple
+
+from src.custom_types import FilteredTree, HorizontalTree, ScopeElement, Scope
 from src.util import visualise_parse_tree
 
 
-def to_string_encoding(tree):
+def to_string_encoding(tree: FilteredTree) -> Iterator[str | int]:
     """
     Convert a tree into it's "string" encoding. Note that this is actually a
     generator of "atoms", to be collected in a list or other sequential type.
@@ -34,16 +37,13 @@ class MinerAlgorithm:
     Abstract class to keep the generic parts of treeminer analyses the same
     """
 
-    def __init__(self, database, support=0.9, to_string=True):
+    def __init__(self, database: List[FilteredTree], support=0.9):
         """
         database: list of trees
         support: minimum frequency of patterns in final solution
         """
-        if to_string:
-            self.database = list(map(lambda t: list(to_string_encoding(t)), database))
-        else:
-            self.database = database
-        self.frequent_patterns = set()
+        self.database: List[HorizontalTree] = list(map(lambda t: list(to_string_encoding(t)), database))
+        self.frequent_patterns: Set[HorizontalTree] = set()
         self.tree_count = len(database)
         atom_occurences = {}
         for tree in self.database:
@@ -59,12 +59,12 @@ class MinerAlgorithm:
         self.support = support
 
         # f_2_support[i][j] = a set of tree_ids that contain the embedded pattern [i, j, -1]
-        self.f_2_support = [
+        self.f_2_support: List[List[Set[int]]] = [
             [set() for _ in range(len(self.f_1))] for _ in range(len(self.f_1))
         ]
 
         # f_1_scope_list[i] = scope list for element i, containing (tree_id, scope) pairs
-        self.scope_list_f_1 = {}
+        self.scope_lists_f_1: Dict[int, List[ScopeElement]] = {}
 
         self.calculate_f_2_support_and_f_1_scope_list()
 
@@ -92,11 +92,12 @@ class MinerAlgorithm:
                         else:
                             depth_stack -= 1
                         j += 1
-                    if self.label2id[elem1] not in self.scope_list_f_1:
-                        self.scope_list_f_1[self.label2id[elem1]] = []
-                    self.scope_list_f_1[self.label2id[elem1]].append(
-                        (tid, (orig_node_count, node_count))
-                    )
+                    if self.label2id[elem1] not in self.scope_lists_f_1:
+                        self.scope_lists_f_1[self.label2id[elem1]] = []
+                    self.scope_lists_f_1[self.label2id[elem1]].append({
+                        "tree_id": tid,
+                        "scope": (orig_node_count, node_count)
+                    })
                     node_count = orig_node_count
 
     def save_id_db_to_file(self):
@@ -130,21 +131,22 @@ class Treeminerd(MinerAlgorithm):
     Class representing a treeminerd analysis
     """
 
-    def enumerate_frequent_subtrees(self, prefix, clazz):
+    def enumerate_frequent_subtrees(self, prefix: Tuple[int,...], clazz: list[tuple[int, int, dict[int, list[list[Scope]]]]]):
         """
         Recursively enumerate frequent subtrees until no more subtrees of larger size can be added
         """
         self.frequent_patterns.add(prefix)
         for x, i, scope_list_x in clazz:
+        for x, i, scope_lists_x in clazz:
             subclass = []
-            for y, j, scope_list_y in clazz:
+            for y, j, scope_lists_y in clazz:
                 if i == j:
                     scope_list = self.in_scope_test(
-                        x, i, scope_list_x, y, j, scope_list_y
+                        x, i, scope_lists_x, y, j, scope_lists_y
                     )
                     if len(scope_list) / self.tree_count >= self.support:
                         subclass.append((y, j + 1, scope_list))
-                scope_list = self.out_scope_test(x, i, scope_list_x, y, j, scope_list_y)
+                scope_list = self.out_scope_test(x, i, scope_lists_x, y, j, scope_lists_y)
                 if len(scope_list) / self.tree_count >= self.support:
                     subclass.append((y, j, scope_list))
             self.enumerate_frequent_subtrees(
@@ -220,7 +222,7 @@ class Treeminerd(MinerAlgorithm):
                                 scope_list.append(to_be_added)
         return scope_dict
 
-    def get_patterns(self):
+    def get_patterns(self) -> Set[HorizontalTree]:
         """
         Calculate f_2 and start recursive search for f_n
         """
@@ -233,17 +235,19 @@ class Treeminerd(MinerAlgorithm):
                     / self.tree_count
                     >= self.support
                 ):  # If element x with element y attached (tree [x, y, -1]) is frequent
-                    scope_dict = defaultdict(list)
-                    for elem1 in self.scope_list_f_1[x_id]:
-                        for elem2 in self.scope_list_f_1[y_id]:
+                    scope_dict: Dict[int, List[List[Scope]]] = defaultdict(list)
+                    for elem1 in self.scope_lists_f_1[x_id]:
+                        for elem2 in self.scope_lists_f_1[y_id]:
+                            scope_x = elem1["scope"]
+                            scope_y = elem2["scope"]
                             if (
-                                elem1 != elem2
-                                and elem1[0] == elem2[0]
-                                and elem1[1][0] <= elem2[1][0]
-                                and elem1[1][1] >= elem2[1][1]
+                                    elem1 != elem2
+                                    and elem1["tree_id"] == elem2["tree_id"]
+                                    and scope_x[0] <= scope_y[0]
+                                    and scope_x[1] >= scope_y[1]
                             ):
-                                scope_dict[elem1[0]].append([elem1[1], elem2[1]])
-                    subclass.append((y_id, 0, scope_dict))
+                                scope_dict[elem1["tree_id"]].append([scope_x, scope_y])
+                    subclass.append((y_id, 0, scope_dict))  # Subclass = (label_id, position, scope_dict)
             self.enumerate_frequent_subtrees((x,), subclass)
         return self.frequent_patterns
 
