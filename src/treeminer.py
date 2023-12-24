@@ -111,7 +111,7 @@ class Treeminerd(MinerAlgorithm):
         Recursively enumerate frequent subtrees until no more subtrees of larger size can be added
         """
         self.frequent_patterns.add(prefix)
-        for x, i, scope_list_x in clazz:
+        prefix_size = len(prefix)
         for x, i, scope_lists_x in clazz:
             subclass = []
             for y, j, scope_lists_y in clazz:
@@ -126,7 +126,7 @@ class Treeminerd(MinerAlgorithm):
                     subclass.append((y, j, scope_list))
             self.enumerate_frequent_subtrees(
                 prefix
-                + (-1,) * (len(prefix) - (2 * prefix.count(-1)) - i - 1)
+                + (-1,) * (prefix_size - (2 * prefix.count(-1)) - i - 1)
                 + (self.f_1[x],),
                 subclass,
             )
@@ -162,18 +162,19 @@ class Treeminerd(MinerAlgorithm):
         scope_dict = defaultdict(list)
         for tid in scope_list_x:
             for elem1 in scope_list_x[tid]:
+                elem1_size = len(elem1)
                 for elem2 in scope_list_y[tid]:
                     if elem1 != elem2:
                         to_be_added = None
                         if (
-                            j + 1 < len(elem1)
+                            j + 1 < elem1_size
                             and elem1[j][0] <= elem2[-1][0]
                             and elem1[j][1] >= elem2[-1][1]
                             and elem1[j + 1][1] < elem2[-1][0]
                         ):
                             to_be_added = elem1[: j + 1] + [elem2[-1]]
                         elif (
-                            j < len(elem1)
+                            j < elem1_size
                             and elem1[j][1] < elem2[-1][0]
                             and elem1[j][0] <= elem2[j][0]
                             and elem1[j][1] >= elem2[j][1]
