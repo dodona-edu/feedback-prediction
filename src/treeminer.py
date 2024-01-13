@@ -45,12 +45,10 @@ class MinerAlgorithm:
         self.database: List[HorizontalTree] = list(map(lambda t: list(to_string_encoding(t)), database))
         self.frequent_patterns: Set[HorizontalTree] = set()
         self.tree_count = len(database)
-        atom_occurences = {}
+        atom_occurences = defaultdict(int)
         for tree in self.database:
             for elem in set(tree):
                 if elem != -1:
-                    if elem not in atom_occurences:
-                        atom_occurences[elem] = 0
                     atom_occurences[elem] += 1
         self.f_1 = sorted(
             k for k, v in atom_occurences.items() if v / self.tree_count >= support
