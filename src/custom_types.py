@@ -18,3 +18,13 @@ type Annotation = Tuple[str, int]
 
 # A combination of a parse tree with a list of (message, line) corresponding to feedback provided
 type FeedbackTree = Tuple[Tree, List[Annotation]]
+
+type Scope = Tuple[int, int]
+
+
+class ScopeElement(TypedDict):
+    """
+    The elements inside a scope list
+    """
+    tree_id: int
+    scope: Scope
