@@ -2,6 +2,7 @@
 Module containing treeminer implementation.
 """
 import datetime
+import multiprocessing
 from collections import defaultdict
 from typing import List, Set, Iterator, Dict, Tuple
 
@@ -44,6 +45,13 @@ class MinerAlgorithm:
         """
         self.database: List[HorizontalTree] = list(map(lambda t: list(to_string_encoding(t)), database))
         self.frequent_patterns: Set[HorizontalTree] = set()
+
+        # if there is a small amount of trees, and the trees are reasonably large, we may need to stop execution early
+        self.early_stopping = len(self.database) < 6 and len(max(self.database, key=len)) > 60
+        if self.early_stopping:
+            manager = multiprocessing.Manager()
+            self.result = manager.list()
+
         self.tree_count = len(database)
         atom_occurences = defaultdict(int)
         for tree in self.database:
@@ -108,7 +116,10 @@ class Treeminerd(MinerAlgorithm):
         """
         Recursively enumerate frequent subtrees until no more subtrees of larger size can be added
         """
-        self.frequent_patterns.add(prefix)
+        if self.early_stopping:
+            self.result.append(prefix)
+        else:
+            self.frequent_patterns.add(prefix)
         prefix_size = len(prefix)
         for x, i, scope_lists_x in clazz:
             subclass = []

@@ -1,4 +1,5 @@
 import datetime
+import multiprocessing
 import pickle
 from collections import defaultdict
 from typing import List, Dict, Tuple, Set
@@ -76,7 +77,17 @@ class FeedbackModel:
     def _find_patterns(message: str, ts: List[FilteredTree]) -> Tuple[str, Set[HorizontalTree]]:
         message_patterns = []
         if len(ts) >= 3:
-            message_patterns = Treeminerd(ts, support=0.8).get_patterns()
+            miner = Treeminerd(ts, support=0.8)
+            if miner.early_stopping:
+                p = multiprocessing.Process(target=miner.get_patterns)
+                p.start()
+                p.join(30)
+                if p.is_alive():
+                    p.terminate()
+                message_patterns = set(miner.result)
+            else:
+                message_patterns = miner.get_patterns()
+
 
         return message, message_patterns
 
