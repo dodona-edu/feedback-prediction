@@ -62,4 +62,4 @@ if __name__ == '__main__':
     # plot_global_accuracies(message_analyzer)
 
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
-    main_feedback(ids)
+    main_feedback([ids[1]])

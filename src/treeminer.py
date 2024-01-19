@@ -6,11 +6,11 @@ import multiprocessing
 from collections import defaultdict
 from typing import List, Set, Iterator, Dict, Tuple
 
-from src.custom_types import FilteredTree, HorizontalTree, ScopeElement, Scope
+from src.custom_types import Tree, HorizontalTree, ScopeElement, Scope
 from src.util import visualise_parse_tree
 
 
-def to_string_encoding(tree: FilteredTree) -> Iterator[str | int]:
+def to_string_encoding(tree: Tree) -> Iterator[str | int]:
     """
     Convert a tree into it's "string" encoding. Note that this is actually a
     generator of "atoms", to be collected in a list or other sequential type.
@@ -38,7 +38,7 @@ class MinerAlgorithm:
     Abstract class to keep the generic parts of treeminer analyses the same
     """
 
-    def __init__(self, database: List[FilteredTree], support=0.9):
+    def __init__(self, database: List[Tree], support=0.9):
         """
         database: list of trees
         support: minimum frequency of patterns in final solution

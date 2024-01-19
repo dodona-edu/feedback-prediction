@@ -13,7 +13,7 @@ from pylint.reporters import JSONReporter
 from tqdm import tqdm
 from tree_sitter import Language, Parser, Node
 
-from src.custom_types import Tree, FeedbackTree, Annotation
+from src.custom_types import AnnotatedCode, Annotation, Tree
 from src.constants import ROOT_DIR
 
 
@@ -28,30 +28,25 @@ class Analyzer(ABC):
         self.not_in_train_test_filter = False  # Whether to filter messages from test files that are not present in any training files
         self.files: List[str] = []
 
-        self.train: Dict[str, FeedbackTree] = {}
-        self.test: Dict[str, FeedbackTree] = {}
+        self.train: Dict[str, AnnotatedCode] = {}
+        self.test: Dict[str, AnnotatedCode] = {}
 
     def map_tree(self, node: Node) -> Tree:
         children = [self.map_tree(child) for child in node.children if child.type != "comment"]
         name = node.text.decode("utf-8") if node.type == "identifier" else node.type
-        lines = set(range(node.start_point[0], node.end_point[0] + 1))
-        # TODO hier sorted(lines) ipv in find_subtree_on_line() als beslist zou worden om sowieso subtree_on_line te gebruiken
-        return {"name": name, "lines": lines, "children": children}
-
-    def parse_file(self, file: str) -> Tree:
-        with open(file, "rb") as f:
-            return self.map_tree(self.parser.parse(f.read()).root_node)
+        return {"name": name, "children": children}
 
     @abstractmethod
     def messages_for_file(self, file: str) -> List[Annotation]:
         pass
 
-    def analyze_file(self, file: str) -> FeedbackTree:
-        tree = self.parse_file(file)
+    def analyze_file(self, file: str) -> AnnotatedCode:
+        with open(file, "rb") as f:
+            code = f.readlines()
 
-        return tree, self.messages_for_file(file)
+        return code, self.messages_for_file(file)
 
-    def analyze_files(self) -> Dict[str, FeedbackTree]:
+    def analyze_files(self) -> Dict[str, AnnotatedCode]:
         """
         Analyze the files by parsing them and adding messages.
         """
@@ -63,7 +58,7 @@ class Analyzer(ABC):
 
         return result
 
-    def _filter_test(self, train: Dict[str, FeedbackTree], test: Dict[str, FeedbackTree]) -> Dict[str, FeedbackTree]:
+    def _filter_test(self, train: Dict[str, AnnotatedCode], test: Dict[str, AnnotatedCode]) -> Dict[str, AnnotatedCode]:
         train_messages = set()
         for (_, items) in train.values():
             train_messages.update(item[0] for item in items)
@@ -74,7 +69,7 @@ class Analyzer(ABC):
 
         return test
 
-    def create_train_test_set(self) -> Tuple[Dict[str, FeedbackTree], Dict[str, FeedbackTree]]:
+    def create_train_test_set(self) -> Tuple[Dict[str, AnnotatedCode], Dict[str, AnnotatedCode]]:
         random.seed(314159)
         files = self.files[:]
 

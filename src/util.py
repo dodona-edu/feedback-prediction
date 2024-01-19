@@ -4,10 +4,10 @@ from typing import List, Iterator, Sequence
 import pydot
 
 from src.constants import ROOT_DIR
-from src.custom_types import FilteredTree, Tree, HorizontalTree
+from src.custom_types import Tree, HorizontalTree
 
 
-def to_string_encoding(tree: FilteredTree) -> Iterator[str | int]:
+def to_string_encoding(tree: Tree) -> Iterator[str | int]:
     """
     Convert a tree into it's "string" encoding. Note that this is actually a
     generator of "atoms", to be collected in a list or other sequential type.
@@ -29,7 +29,7 @@ def sequence_fully_contains_other_sequence(list1: Sequence, list2: Sequence) -> 
 
 # tree.png from data/excercises/505886137/12989287.py
 
-def visualise_parse_tree(tree: Tree | HorizontalTree, is_string_encoding=False, file_name="tree", with_lines=False) -> None:
+def visualise_parse_tree(tree: Tree | HorizontalTree, is_string_encoding=False, file_name="tree") -> None:
     """
     Create a dot file of the parse tree that can be visualised by Graphviz
     The dot file can be turned into e.g. a png using:
@@ -40,22 +40,19 @@ def visualise_parse_tree(tree: Tree | HorizontalTree, is_string_encoding=False, 
     if is_string_encoding:
         visualise_string_subtree(graph, tree)
     else:
-        visualise_subtree(graph, tree, [0], with_lines)
+        visualise_subtree(graph, tree, [0])
     output_graphviz_dot = graph.to_string()
     with open(f'{ROOT_DIR}/output/dots/{file_name}.dot', 'w') as file:
         file.write(output_graphviz_dot)
 
 
-def visualise_subtree(graph: pydot.Dot, tree: Tree, next_node_id: List[int], with_lines: bool) -> pydot.Node:
-    if with_lines:
-        label = f"'{tree['name']} - {str(tree['lines'])}'"
-    else:
-        label = f"'{tree['name']}'"
+def visualise_subtree(graph: pydot.Dot, tree: Tree, next_node_id: List[int]) -> pydot.Node:
+    label = f"'{tree['name']}'"
     node = pydot.Node(next_node_id[0], label=label)
     next_node_id[0] += 1
     graph.add_node(node)
     for child in tree['children']:
-        child_node = visualise_subtree(graph, child, next_node_id, with_lines)
+        child_node = visualise_subtree(graph, child, next_node_id)
         graph.add_edge(pydot.Edge(node.get_name(), child_node.get_name()))
     return node
 

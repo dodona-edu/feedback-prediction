@@ -7,10 +7,14 @@ from typing import List, Dict, Tuple, Set
 from pqdm.processes import pqdm
 from tqdm import tqdm
 
-from src.custom_types import FeedbackTree, Tree, FilteredTree, HorizontalTree
+from src.analyze import FeedbackAnalyzer
+from src.custom_types import AnnotatedCode, Tree, HorizontalTree
 from src.util import to_string_encoding
 from src.treeminer import Treeminerd
 from src.util import sequence_fully_contains_other_sequence
+
+
+analyzer = FeedbackAnalyzer()
 
 
 class FeedbackModel:
@@ -30,51 +34,26 @@ class FeedbackModel:
         with open(f'{self.PATTERNS_DIR}/{model_file}', 'wb') as patterns_file:
             pickle.dump((self.patterns, self.pattern_weights), patterns_file, pickle.HIGHEST_PROTOCOL)
 
-    def _keep_only_nodes_of_line(self, tree: Tree, line: int) -> FilteredTree:
-        return {"name": tree["name"],
-                "children": list(map(lambda t: self._keep_only_nodes_of_line(t, line), filter(lambda t: line in t["lines"], tree["children"])))}
+    def tree_on_line(self, code: List[bytes], line: int) -> Tree | None:
+        code = b''.join(code[line:line + 1])
+        root_on_line = analyzer.parser.parse(code).root_node
+        root_as_tree = analyzer.map_tree(root_on_line)
+        if len(root_as_tree['children']):
+            return root_as_tree['children'][0]
+        else:
+            return None
 
-    def find_subtree_on_line(self, tree: Tree, line: int) -> FilteredTree | None:
-        """
-        Find the subtree that has a root such that 'line' is its first child
-        """
-        root = None
-        while root is None:
-            i = 0
-            children: List[Tree] = tree["children"]
-            subtree = None
-            while i < len(children) and tree != subtree:
-                subtree = children[i]
-                lines = subtree["lines"]
-                if line in lines:
-                    tree = subtree
-                    if sorted(lines)[0] == line:
-                        root = subtree
-                i += 1
-
-            if tree != subtree:
-                return None
-
-        if root is not None:
-            result = {"name": root["name"],
-                      "children": list(map(lambda t: self._keep_only_nodes_of_line(t, line), filter(lambda t: line in t["lines"], tree["children"])))
-                      }
-
-            return result
-
-        return None
-
-    def _message_subtrees(self, dataset: Dict[str, FeedbackTree]) -> Dict[str, List[FilteredTree]]:
+    def _message_subtrees(self, dataset: Dict[str, AnnotatedCode]) -> Dict[str, List[Tree]]:
         result = defaultdict(list)
         for key, item in dataset.items():
             for m, line in item[1]:
-                subtree = self.find_subtree_on_line(item[0], line)
+                subtree = self.tree_on_line(item[0], line)
                 if subtree is not None:
                     result[m].append(subtree)
         return result
 
     @staticmethod
-    def _find_patterns(message: str, ts: List[FilteredTree]) -> Tuple[str, Set[HorizontalTree]]:
+    def _find_patterns(message: str, ts: List[Tree]) -> Tuple[str, Set[HorizontalTree]]:
         message_patterns = []
         if len(ts) >= 3:
             miner = Treeminerd(ts, support=0.8)
@@ -91,7 +70,7 @@ class FeedbackModel:
 
         return message, message_patterns
 
-    def train(self, training: Dict[str, FeedbackTree], n_procs=8) -> None:
+    def train(self, training: Dict[str, AnnotatedCode], n_procs=8) -> None:
         """
         Determine the patterns present in the trees in the training set.
         """
@@ -219,14 +198,16 @@ class FeedbackModel:
         if subtree is None:
             return None
 
+    def calculate_matching_score(self, m: str, subtree: HorizontalTree) -> float:
+        pattern_set = self.patterns[m]
+        matches = list(filter(lambda pattern: self.subtree_matches(subtree, pattern), pattern_set))
+        matches_score = 0
+        if pattern_set:
+            matches_score = sum(self.pattern_weights[match] for match in matches) / len(pattern_set)
+
+        return matches_score
+
+    def calculate_matching_scores(self, subtree: Tree) -> Dict[str, float]:
         horizontal_subtree = list(to_string_encoding(subtree))
-
-        def matching_score(m: str) -> float:
-            matches = list(filter(lambda pattern: self.subtree_matches(horizontal_subtree, pattern), self.patterns[m]))
-            matches_score = sum(self.pattern_weights[match] for match in matches)
-            total = len(self.patterns[m])
-            return matches_score / total
-
-        message_matches = [(message, matching_score(message)) for message in self.patterns.keys()]
-        message_matches.sort(key=lambda x: x[1], reverse=True)
-        return list(map(lambda x: x[0], message_matches))
+        matching_scores = {message: self.calculate_matching_score(message, horizontal_subtree) for message in self.patterns.keys()}
+        return matching_scores

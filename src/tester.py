@@ -7,20 +7,22 @@ from pqdm.processes import pqdm
 from tqdm import tqdm
 
 from src.analyze import Analyzer, FeedbackAnalyzer
-from src.custom_types import FeedbackTree
+from src.custom_types import AnnotatedCode
 from src.feedback_model import FeedbackModel
 from src.constants import ROOT_DIR
 
 
-def test_one_file(messages: FeedbackTree, model: FeedbackModel, n=5) -> Tuple[Counter, List[Counter]]:
+def test_one_file(annotated_code: AnnotatedCode, model: FeedbackModel, n=5) -> Tuple[Counter, List[Counter]]:
     total = collections.Counter()
     first_n = [collections.Counter() for _ in range(n)]
-    tree = messages[0]
+    code = annotated_code[0]
 
-    for m, line in messages[1]:
-        messages_sorted = model.predict_most_likely_messages(tree, line)
+    for m, line in annotated_code[1]:
+        subtree = model.tree_on_line(code, line)
+        if subtree is not None:
+            matching_scores = model.calculate_matching_scores(subtree)
+            messages_sorted = sorted(matching_scores.keys(), key=lambda ms: matching_scores[ms], reverse=True)
 
-        if messages_sorted is not None:
             total[m] += 1
             if m in messages_sorted:
                 i = messages_sorted.index(m)
@@ -30,7 +32,7 @@ def test_one_file(messages: FeedbackTree, model: FeedbackModel, n=5) -> Tuple[Co
     return total, first_n
 
 
-def test_all_files(test: Dict[str, FeedbackTree], model: FeedbackModel, n=5, n_procs=8) -> Tuple[Counter, List[Counter], Counter]:
+def test_all_files(test: Dict[str, AnnotatedCode], model: FeedbackModel, n=5, n_procs=8) -> Tuple[Counter, List[Counter], Counter]:
     if n_procs > 1:
         results = pqdm(map(lambda ms: (ms, model, n), test.values()), test_one_file, n_jobs=8, argument_type='args')
     else:
