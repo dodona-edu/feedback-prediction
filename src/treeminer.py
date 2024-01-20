@@ -38,12 +38,12 @@ class MinerAlgorithm:
     Abstract class to keep the generic parts of treeminer analyses the same
     """
 
-    def __init__(self, database: List[Tree], support=0.9):
+    def __init__(self, database: List[HorizontalTree], support=0.9):
         """
         database: list of trees
         support: minimum frequency of patterns in final solution
         """
-        self.database: List[HorizontalTree] = list(map(lambda t: list(to_string_encoding(t)), database))
+        self.database: List[HorizontalTree] = database
         self.frequent_patterns: Set[HorizontalTree] = set()
 
         # if there is a small amount of trees, and the trees are reasonably large, we may need to stop execution early
@@ -343,6 +343,7 @@ if __name__ == "__main__":
 
 
     def analyze_trees(trees):
+        trees = list(map(lambda t: list(to_string_encoding(t)), trees))
         # t_patterns = timed(Treeminer(trees).get_patterns)
         # print(t_patterns)
         td_patterns = timed(Treeminerd(trees).get_patterns)

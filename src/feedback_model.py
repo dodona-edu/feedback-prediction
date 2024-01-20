@@ -8,7 +8,7 @@ from pqdm.processes import pqdm
 from tqdm import tqdm
 
 from src.analyze import FeedbackAnalyzer
-from src.custom_types import AnnotatedCode, Tree, HorizontalTree
+from src.custom_types import AnnotatedCode, Tree, HorizontalTree, PatternCollection
 from src.util import to_string_encoding
 from src.treeminer import Treeminerd
 from src.util import sequence_fully_contains_other_sequence
@@ -21,7 +21,7 @@ class FeedbackModel:
     PATTERNS_DIR = ""
 
     def __init__(self):
-        self.patterns: Dict[str, Set[HorizontalTree]] = {}
+        self.patterns: Dict[str, PatternCollection] = {}
         self.pattern_weights = {}
 
     def load_model(self, model_file: str) -> None:
@@ -43,18 +43,20 @@ class FeedbackModel:
         else:
             return None
 
-    def _message_subtrees(self, dataset: Dict[str, AnnotatedCode]) -> Dict[str, List[Tree]]:
+    def _message_subtrees(self, dataset: Dict[str, AnnotatedCode]) -> Dict[str, List[HorizontalTree]]:
         result = defaultdict(list)
         for key, item in dataset.items():
             for m, line in item[1]:
                 subtree = self.tree_on_line(item[0], line)
                 if subtree is not None:
-                    result[m].append(subtree)
+                    result[m].append(list(to_string_encoding(subtree)))
         return result
 
     @staticmethod
-    def _find_patterns(message: str, ts: List[Tree]) -> Tuple[str, Set[HorizontalTree]]:
+    def _find_patterns(message: str, ts: List[HorizontalTree]) -> Tuple[str, PatternCollection]:
         message_patterns = []
+        identifying_nodes = set()
+
         if len(ts) >= 3:
             miner = Treeminerd(ts, support=0.8)
             if miner.early_stopping:
@@ -67,8 +69,11 @@ class FeedbackModel:
             else:
                 message_patterns = miner.get_patterns()
 
+            for t in ts:
+                identifying_nodes.update(t)
+            identifying_nodes.remove(-1)
 
-        return message, message_patterns
+        return message, (message_patterns, identifying_nodes)
 
     def train(self, training: Dict[str, AnnotatedCode], n_procs=8) -> None:
         """
@@ -80,20 +85,27 @@ class FeedbackModel:
         print("Determining patterns for training data")
         patterns = {}
 
-        results: List[Tuple[str, Set[HorizontalTree]]] = []
+        results: List[Tuple[str, PatternCollection]] = []
         if n_procs > 1:
             results = pqdm(list(subtrees.items()), self._find_patterns, n_jobs=8, argument_type='args')
         else:
             for m, ts in tqdm(subtrees.items()):
                 results.append(self._find_patterns(m, ts))
 
-        for m, res in results:
-            if len(res) > 0:
-                patterns[m] = res
+        node_counts = defaultdict(int)
+        for _, (_, nodes) in results:
+            for node in nodes:
+                node_counts[node] += 1
+        nodes_to_remove = {n for n, c in node_counts.items() if c > 3}
+
+        for m, (pattern_set, node_set) in results:
+            node_set.difference_update(nodes_to_remove)
+            if pattern_set or node_set:
+                patterns[m] = (pattern_set, node_set)
 
         print("Calculating pattern weights")
         pattern_weights = defaultdict(float)
-        for message_patterns in patterns.values():
+        for message_patterns, _ in patterns.values():
             for pattern in message_patterns:
                 pattern_weights[pattern] += 1
 
@@ -194,13 +206,19 @@ class FeedbackModel:
         return result
 
     def calculate_matching_score(self, m: str, subtree: HorizontalTree) -> float:
-        pattern_set = self.patterns[m]
+        pattern_set = self.patterns[m][0]
         matches = list(filter(lambda pattern: self.subtree_matches(subtree, pattern), pattern_set))
         matches_score = 0
         if pattern_set:
             matches_score = sum(self.pattern_weights[match] for match in matches) / len(pattern_set)
 
-        return matches_score
+        node_set = self.patterns[m][1]
+        nodes = set(subtree).intersection(node_set)
+        nodes_score = 0
+        if node_set:
+            nodes_score = len(nodes) / len(node_set)
+
+        return matches_score + nodes_score
 
     def calculate_matching_scores(self, subtree: Tree) -> Dict[str, float]:
         horizontal_subtree = list(to_string_encoding(subtree))
