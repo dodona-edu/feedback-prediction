@@ -4,22 +4,10 @@ Module containing treeminer implementation.
 import datetime
 import multiprocessing
 from collections import defaultdict
-from typing import List, Set, Iterator, Dict, Tuple
+from typing import List, Set, Dict, Tuple
 
-from src.custom_types import Tree, HorizontalTree, ScopeElement, Scope
-from src.util import visualise_parse_tree
-
-
-def to_string_encoding(tree: Tree) -> Iterator[str | int]:
-    """
-    Convert a tree into it's "string" encoding. Note that this is actually a
-    generator of "atoms", to be collected in a list or other sequential type.
-    """
-    yield tree["name"]
-    for child in tree["children"]:
-        for elem in to_string_encoding(child):
-            yield elem
-        yield -1
+from src.custom_types import HorizontalTree, ScopeElement, Scope
+from src.util import to_string_encoding
 
 
 def numbers_to_string(numbers):
