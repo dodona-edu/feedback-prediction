@@ -193,11 +193,6 @@ class FeedbackModel:
 
         return result
 
-    def predict_most_likely_messages(self, tree: Tree, line: int) -> List[str] | None:
-        subtree = self.find_subtree_on_line(tree, line)
-        if subtree is None:
-            return None
-
     def calculate_matching_score(self, m: str, subtree: HorizontalTree) -> float:
         pattern_set = self.patterns[m]
         matches = list(filter(lambda pattern: self.subtree_matches(subtree, pattern), pattern_set))
