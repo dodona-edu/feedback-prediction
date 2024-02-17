@@ -156,6 +156,28 @@ class FeedbackModel:
         True
         >>> model.subtree_matches((0, 1, 2, 3, -1, -1, 2, -1, 5, -1, -1, 1, 4, -1, -1), (0, 1, 3, -1, 4, -1, -1))
         False
+        >>> model.subtree_matches((0, 1, 3, 1, -1, 4, -1, -1, 5, -1, -1, 6, -1, 1, 2, -1, -1), (0, 1, 2, -1, -1))
+        True
+        >>> model.subtree_matches((4, 0, 1, 3, 1, -1, 2, -1, -1, 2, -1, -1, 2, -1, -1, 5, -1), (0, 1, -1, 2, -1, 2, -1, 2, -1))
+        True
+        >>> model.subtree_matches(('expression_statement', 'assignment', 'uitgang', -1, '=', -1, 'list', '[', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ']', -1, -1, -1), ('list', 'call', 'range', -1, '(', -1, '('))
+        False
+        >>> model.subtree_matches(('expression_statement', 'augmented_assignment', 'output', -1, '+=', -1, 'subscript', 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'attribute', 'attribute', 'self', -1, '.', -1, 'codec', -1, -1, '.', -1, 'keys', -1, -1, 'argument_list', '(', -1, ')', -1, -1, -1, ')', -1, -1, -1, '[', -1, 'call', 'attribute', 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'attribute', 'attribute', 'self', -1, '.', -1, 'codec', -1, -1, '.', -1, 'values', -1, -1, 'argument_list', '(', -1, ')', -1, -1, -1, ')', -1, -1, -1, '.', -1, 'index', -1, -1, 'argument_list', '(', -1, 'element', -1, ')', -1, -1, -1, ']', -1, -1, -1), ('call', 'attribute', '.', -1, -1, '(', -1, 'self'))
+        False
+        >>> model.subtree_matches(('function_definition', 'def', -1, 'verborgen_coderen', -1, 'parameters', '(', -1, 'self', -1, ',', -1, 'klare_tekst', -1, ',', -1, 'default_parameter', 'a', -1, '=', -1, 'none', -1, -1, ',', -1, 'something', 'b', -1, '=', -1, 'none', -1, -1, ')', -1, -1, ':', -1, 'block', -1), ('function_definition', 'def', -1, 'parameters', '(', -1, 'default_parameter', 'b', -1, '=', -1, 'none', -1, -1, -1, 'block'))
+        False
+        >>> model.subtree_matches(('function_definition', 'def', -1, 'verborgen_coderen', -1, 'parameters', '(', -1, 'self', -1, ',', -1, 'klare_tekst', -1, ',', -1, 'default_parameter', 'a', -1, '=', -1, 'none', -1, -1, ',', -1, 'default_parameter', 'b', -1, '=', -1, 'none', -1, -1, ')', -1, -1, ':', -1, 'block', -1), ('parameters', '(', -1, 'self', -1, ',', -1, 'default_parameter', 'b', -1, -1, ')'))
+        True
+        >>> model.subtree_matches(('function_definition', 'def', -1, 'verborgen_coderen', -1, 'parameters', '(', -1, 'self', -1, ',', -1, 'klare_tekst', -1, ',', -1, 'default_parameter', 'a', -1, '=', -1, 'none', -1, -1, ',', -1, 'default_parameter', 'b', -1, '=', -1, 'none', -1, -1, ')', -1, -1, ':', -1, 'block', -1), ('function_definition', 'def', -1, 'parameters', '(', -1, 'default_parameter', 'b', -1, '=', -1, 'none', -1, -1, -1, 'block'))
+        True
+        >>> model.subtree_matches(('function_definition', 'def', -1, 'verborgen_coderen', -1, 'parameters', '(', -1, 'self', -1, ',', -1, 'klare_tekst', -1, ',', -1, 'default_parameter', 'a', -1, '=', -1, 'none', -1, -1, ',', -1, 'default_parameter', 'b', -1, '=', -1, 'none', -1, -1, ')', -1, -1, ':', -1, 'block', -1), ('function_definition', 'def', -1, 'parameters', '(', -1, ',', -1, 'default_parameter', 'b', -1, '=', -1, 'none', -1, -1, -1, ':'))
+        True
+        >>> model.subtree_matches(('expression_statement', 'assignment', 'lijst', -1, '=', -1, 'list_comprehension', '[', -1, 'call', 'read_cocktail', -1, 'argument_list', '(', -1, 'line', -1, ')', -1, -1, -1, 'for_in_clause', 'for', -1, 'line', -1, 'in', -1, 'call', 'map', -1, 'argument_list', '(', -1, 'attribute', 'str', -1, '.', -1, 'strip', -1, -1, ',', -1, 'call', 'open', -1, 'argument_list', '(', -1, 'file', -1, ',', -1, 'string', '"', -1, '"', -1, -1, ',', -1, 'keyword_argument', 'encoding', -1, '=', -1, 'string', '"', -1, '"', -1, -1, -1, ')', -1, -1, -1, ')', -1, -1, -1, -1, ']', -1, -1, -1), ('expression_statement', 'assignment', '=', -1, 'call', 'argument_list', '(', -1, ',', -1, '"', -1, '"'))
+        True
+        >>> model.subtree_matches(('expression_statement', 'assignment', 'lijst', -1, '=', -1, 'list_comprehension', '[', -1, 'call', 'read_cocktail', -1, 'argument_list', '(', -1, 'line', -1, ')', -1, -1, -1, 'for_in_clause', 'for', -1, 'line', -1, 'in', -1, 'call', 'map', -1, 'argument_list', '(', -1, 'attribute', 'str', -1, '.', -1, 'strip', -1, -1, ',', -1, 'call', 'open', -1, 'argument_list', '(', -1, 'file', -1, ',', -1, 'string', '"', -1, '"', -1, -1, ',', -1, 'keyword_argument', 'encoding', -1, '=', -1, 'string', '"', -1, '"', -1, -1, -1, ')', -1, -1, -1, ')', -1, -1, -1, -1, ']', -1, -1, -1), ('expression_statement', 'assignment', 'call', 'argument_list', 'string'))
+        True
+        >>> model.subtree_matches(('expression_statement', 'assignment', 'lijst', -1, '=', -1, 'list_comprehension', '[', -1, 'call', 'read_cocktail', -1, 'argument_list', '(', -1, 'line', -1, ')', -1, -1, -1, 'for_in_clause', 'for', -1, 'line', -1, 'in', -1, 'call', 'map', -1, 'argument_list', '(', -1, 'attribute', 'str', -1, '.', -1, 'strip', -1, -1, ',', -1, 'call', 'open', -1, 'argument_list', '(', -1, 'file', -1, ',', -1, 'string', '"', -1, '"', -1, -1, ',', -1, 'keyword_argument', 'encoding', -1, '=', -1, 'string', '"', -1, '"', -1, -1, -1, ')', -1, -1, -1, ')', -1, -1, -1, -1, ']', -1, -1, -1), ('expression_statement', 'assignment', 'call', 'argument_list', '(', -1, ','))
+        True
         """
         if not set(pattern).issubset(subtree):
             return False
@@ -175,8 +197,8 @@ class FeedbackModel:
             for i, item in enumerate(subtree[start:]):
                 if item == -1:
                     if depth_stack and depth - 1 == depth_stack[-1]:
-                        last_depth = depth_stack.pop()
-                        if pattern[p_i] != -1 and (last_depth < pattern_depth or not depth_stack):
+                        depth_stack.pop()
+                        if pattern[p_i] != -1:
                             p_i = 0
                         if pattern[p_i] == -1:
                             pattern_depth -= 1
