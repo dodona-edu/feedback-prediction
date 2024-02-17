@@ -186,29 +186,31 @@ class FeedbackModel:
 
         start = 0
         p_i = 0
-        pattern_depth = 0
         depth = 0
         depth_stack = []
         history = []
 
         def find_in_subtree() -> bool:
-            nonlocal start, p_i, pattern_depth, depth, depth_stack
+            nonlocal start, p_i, depth, depth_stack
 
             for i, item in enumerate(subtree[start:]):
+                # We go up in the tree
                 if item == -1:
+                    # If the depth of the last matched node is equal to what the depth will be after this iteration
                     if depth_stack and depth - 1 == depth_stack[-1]:
+                        # We go up past the last node
                         depth_stack.pop()
+                        # If in the pattern, we are not supposed to go up
                         if pattern[p_i] != -1:
+                            # Reset the pattern index
                             p_i = 0
-                        if pattern[p_i] == -1:
-                            pattern_depth -= 1
+                        else:
                             p_i += 1
                     depth -= 1
                 else:
                     if pattern[p_i] == item:
-                        history.append((start + i + 1, depth + 1, depth_stack[:], pattern_depth, p_i))
+                        history.append((start + i + 1, depth + 1, depth_stack[:], p_i))
                         depth_stack.append(depth)
-                        pattern_depth += 1
                         p_i += 1
 
                     depth += 1
@@ -220,7 +222,7 @@ class FeedbackModel:
 
         result = find_in_subtree()
         while not result and history:
-            start, depth, depth_stack, pattern_depth, p_i = history.pop()
+            start, depth, depth_stack, p_i = history.pop()
             # Subtree needs to contain all items from pattern
             if len(pattern) - p_i <= len(subtree) - start and sequence_fully_contains_other_sequence(subtree[start:], pattern[p_i:]):
                 result = find_in_subtree()
