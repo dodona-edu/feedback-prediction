@@ -1,6 +1,12 @@
 from typing import TypedDict, List, Tuple, Sequence, Set
 
 
+class LineTree(TypedDict):
+    name: str
+    children: List['LineTree']
+    lines: List[int]
+
+
 class Tree(TypedDict):
     name: str
     children: List['Tree']
@@ -15,8 +21,8 @@ type PatternCollection = Tuple[Set[HorizontalTree], Set[str]]
 # A combination of a feedback comment and a line number on which the feedback was given
 type Annotation = Tuple[str, int]
 
-# A combination of a list of lines of code and a list of (message, line) corresponding to feedback provided
-type AnnotatedCode = Tuple[List[bytes], List[Annotation]]
+# A combination of parsed code in LineTree form and a list of (message, line) corresponding to feedback provided
+type AnnotatedTree = Tuple[LineTree, List[Annotation]]
 
 type Scope = Tuple[int, int]
 

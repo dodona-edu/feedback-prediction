@@ -8,10 +8,11 @@ from pqdm.processes import pqdm
 from tqdm import tqdm
 
 from src.analyze import FeedbackAnalyzer
-from src.custom_types import AnnotatedCode, Tree, HorizontalTree, PatternCollection
+from src.custom_types import AnnotatedTree, Tree, HorizontalTree, PatternCollection
 from src.util import to_string_encoding
 from src.tree_algorithms.treeminer import Treeminerd
 from src.util import sequence_fully_contains_other_sequence
+from src.tree_algorithms.subtree_on_line import find_subtree_on_line
 
 
 analyzer = FeedbackAnalyzer()
@@ -34,20 +35,12 @@ class FeedbackModel:
         with open(f'{self.PATTERNS_DIR}/{model_file}', 'wb') as patterns_file:
             pickle.dump((self.patterns, self.pattern_weights), patterns_file, pickle.HIGHEST_PROTOCOL)
 
-    def tree_on_line(self, code: List[bytes], line: int) -> Tree | None:
-        code = b''.join(code[line:line + 1])
-        root_on_line = analyzer.parser.parse(code).root_node
-        root_as_tree = analyzer.map_tree(root_on_line)
-        if len(root_as_tree['children']):
-            return root_as_tree['children'][0]
-        else:
-            return None
 
-    def _message_subtrees(self, dataset: Dict[str, AnnotatedCode]) -> Dict[str, List[HorizontalTree]]:
+    def _message_subtrees(self, dataset: Dict[str, AnnotatedTree]) -> Dict[str, List[HorizontalTree]]:
         result = defaultdict(list)
-        for key, item in dataset.items():
-            for m, line in item[1]:
-                subtree = self.tree_on_line(item[0], line)
+        for key, (tree, annotations) in dataset.items():
+            for m, line in annotations:
+                subtree = find_subtree_on_line(tree, line)
                 if subtree is not None:
                     result[m].append(list(to_string_encoding(subtree)))
         return result
@@ -75,7 +68,7 @@ class FeedbackModel:
 
         return message, (message_patterns, identifying_nodes)
 
-    def train(self, training: Dict[str, AnnotatedCode], n_procs=8) -> None:
+    def train(self, training: Dict[str, AnnotatedTree], n_procs=8) -> None:
         """
         Determine the patterns present in the trees in the training set.
         """
