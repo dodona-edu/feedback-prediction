@@ -10,7 +10,7 @@ from tqdm import tqdm
 from src.analyze import FeedbackAnalyzer
 from src.custom_types import AnnotatedCode, Tree, HorizontalTree, PatternCollection
 from src.util import to_string_encoding
-from src.treeminer import Treeminerd
+from src.tree_algorithms.treeminer import Treeminerd
 from src.util import sequence_fully_contains_other_sequence
 
 
