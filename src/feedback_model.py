@@ -171,6 +171,8 @@ class FeedbackModel:
         True
         >>> model.subtree_matches(('expression_statement', 'assignment', 'lijst', -1, '=', -1, 'list_comprehension', '[', -1, 'call', 'read_cocktail', -1, 'argument_list', '(', -1, 'line', -1, ')', -1, -1, -1, 'for_in_clause', 'for', -1, 'line', -1, 'in', -1, 'call', 'map', -1, 'argument_list', '(', -1, 'attribute', 'str', -1, '.', -1, 'strip', -1, -1, ',', -1, 'call', 'open', -1, 'argument_list', '(', -1, 'file', -1, ',', -1, 'string', '"', -1, '"', -1, -1, ',', -1, 'keyword_argument', 'encoding', -1, '=', -1, 'string', '"', -1, '"', -1, -1, -1, ')', -1, -1, -1, ')', -1, -1, -1, -1, ']', -1, -1, -1), ('expression_statement', 'assignment', 'call', 'argument_list', '(', -1, ','))
         True
+        >>> model.subtree_matches(('expression_statement', 'assignment', 'uitgang', -1, '=', -1, 'list', '[', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ',', -1, 'call', 'list', -1, 'argument_list', '(', -1, 'call', 'range', -1, 'argument_list', '(', -1, 'integer', -1, ',', -1, 'integer', -1, ')', -1, -1, -1, ')', -1, -1, -1, ']', -1, -1, -1), ('call', 'range', -1, '(', -1, '('))
+        False
         """
         if not set(pattern).issubset(subtree):
             return False
@@ -183,10 +185,11 @@ class FeedbackModel:
         depth_stack = []
         history = []
 
-        def find_in_subtree() -> bool:
+        def find_in_subtree(current_subtree) -> bool:
             nonlocal start, p_i, depth, depth_stack
 
-            for i, item in enumerate(subtree[start:]):
+            local_history = []
+            for i, item in enumerate(current_subtree):
                 # We go up in the tree
                 if item == -1:
                     # If the depth of the last matched node is equal to what the depth will be after this iteration
@@ -197,12 +200,16 @@ class FeedbackModel:
                         if pattern[p_i] != -1:
                             # Reset the pattern index
                             p_i = 0
+                            # If we are past the first matched node, we can limit our future backtracking in local_history to a new subtree
+                            if not depth_stack:
+                                history.append((local_history, current_subtree[:i + 1]))
+                                local_history = []
                         else:
                             p_i += 1
                     depth -= 1
                 else:
                     if pattern[p_i] == item:
-                        history.append((start + i + 1, depth + 1, depth_stack[:], p_i))
+                        local_history.append((start + i + 1, depth + 1, depth_stack[:], p_i))
                         depth_stack.append(depth)
                         p_i += 1
 
@@ -211,14 +218,21 @@ class FeedbackModel:
                 if p_i == pattern_length:
                     return True
 
+            if local_history:
+                history.append((local_history, current_subtree))
+
             return False
 
-        result = find_in_subtree()
+        result = find_in_subtree(subtree)
         while not result and history:
-            start, depth, depth_stack, p_i = history.pop()
-            # Subtree needs to contain all items from pattern
-            if len(pattern) - p_i <= len(subtree) - start and sequence_fully_contains_other_sequence(subtree[start:], pattern[p_i:]):
-                result = find_in_subtree()
+            to_explore, to_explore_subtree = history.pop()
+            while not result and to_explore:
+                start, depth, depth_stack, p_i = to_explore.pop()
+                new_subtree = to_explore_subtree[start:]
+                start = 0
+                # Subtree needs to contain all items from pattern
+                if pattern_length - p_i <= len(new_subtree) and sequence_fully_contains_other_sequence(new_subtree, pattern[p_i:]):
+                    result = find_in_subtree(new_subtree)
 
         return result
 
