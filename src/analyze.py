@@ -1,6 +1,7 @@
 import csv
 import datetime
 import json
+import pickle
 from abc import abstractmethod, ABC
 import random
 from collections import defaultdict
@@ -41,6 +42,9 @@ class Analyzer(ABC):
     def messages_for_file(self, file: str) -> List[Annotation]:
         pass
 
+    def set_files(self, files: List[str]) -> None:
+        self.files = files
+
     def analyze_file(self, file: str) -> AnnotatedTree:
         with open(file, "rb") as f:
             tree = self.map_tree(self.parser.parse(f.read()).root_node)
@@ -79,10 +83,10 @@ class Analyzer(ABC):
         train = {}
         test = {}
 
-        for filename in files[:len(files) // 2]:
+        for filename in tqdm(files[:len(files) // 2]):
             train[filename] = self.analyze_file(filename)
 
-        for filename in files[len(files) // 2:]:
+        for filename in tqdm(files[len(files) // 2:]):
             test[filename] = self.analyze_file(filename)
 
         if self.not_in_train_test_filter:
@@ -105,6 +109,16 @@ class PylintAnalyzer(Analyzer):
         lint.Run(["--module-naming-style=any", "--disable=C0304", file], reporter=reporter, exit=False)
         lint_result = list(map(lambda m: (m["line"] - 1, f"{m['message-id']}-{m['symbol']}"), json.loads(pylint_output.getvalue())))
         return [(message, line) for (line, message) in lint_result]
+
+    def load_train_test(self, file: str) -> None:
+        print("Loading train and test data")
+        with open(f'{ROOT_DIR}/pylint/output/analysis/{file}', 'rb') as data_file:
+            self.train, self.test = pickle.load(data_file)
+
+    def save_train_test(self, file: str) -> None:
+        print("Saving train and test data")
+        with open(f'{ROOT_DIR}/pylint/output/analysis/{file}', 'wb') as data_file:
+            pickle.dump((self.train, self.test), data_file, pickle.HIGHEST_PROTOCOL)
 
 
 class FeedbackAnalyzer(Analyzer):
