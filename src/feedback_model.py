@@ -131,7 +131,11 @@ class FeedbackModel:
 
         return matches_score + nodes_score
 
-    def calculate_matching_scores(self, subtree: Tree) -> Dict[str, float]:
+    def calculate_matching_scores(self, subtree: Tree, identifying_only=False) -> Dict[str, float]:
         horizontal_subtree = list(to_string_encoding(subtree))
-        matching_scores = {message: self.calculate_matching_score(message, horizontal_subtree) for message in self.patterns.keys()}
+        if identifying_only:
+            nodes = set(horizontal_subtree)
+            matching_scores = {message: self.calculate_matching_score(message, horizontal_subtree) for message, (_, identifying_nodes) in self.patterns.items() if nodes.intersection(identifying_nodes)}
+        else:
+            matching_scores = {message: self.calculate_matching_score(message, horizontal_subtree) for message in self.patterns.keys()}
         return matching_scores
