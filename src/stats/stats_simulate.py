@@ -9,7 +9,7 @@ from src.analyze import FeedbackAnalyzer
 from src.custom_types import AnnotatedTree
 from src.feedback_model import FeedbackModel
 from src.tester import test_all_files
-from src.constants import ROOT_DIR, COLORS
+from src.constants import ROOT_DIR, COLORS, ENGLISH_EXERCISE_NAMES_MAP
 
 
 def get_messages(dataset: Dict[str, AnnotatedTree]) -> Set[str]:
@@ -113,7 +113,7 @@ def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List
         labels = [c if c > 0 else "" for c in counts]
         ax1.bar_label(bars, labels, label_type='center', color='white')
 
-    ax1.set_title(f"Simulation of exercise {e_id}", pad=50)
+    ax1.set_title(f"Simulation of exercise {ENGLISH_EXERCISE_NAMES_MAP[e_id]}", pad=50)
     ax1.set_xlim([0, 1])
 
     ax1.set_xlabel("Percentage of messages")
