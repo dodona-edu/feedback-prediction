@@ -20,6 +20,7 @@ class FeedbackModel:
     def __init__(self):
         self.patterns: Dict[str, PatternCollection] = {}
         self.pattern_weights = {}
+        self.score_thresholds = {}
 
     def load_model(self, model_file: str) -> None:
         print("Loading patterns data")
@@ -59,7 +60,7 @@ class FeedbackModel:
 
         return message, (message_patterns, identifying_nodes)
 
-    def train(self, training: Dict[str, AnnotatedTree], n_procs=8) -> None:
+    def train(self, training: Dict[str, AnnotatedTree], n_procs=8, thresholds=False) -> None:
         """
         Train the feedback model.
         """
@@ -100,7 +101,20 @@ class FeedbackModel:
         self.patterns = patterns
         self.pattern_weights = pattern_weights
 
+        if thresholds:
+            print("Calculating score thresholds")
+            self.calculate_score_thresholds(subtrees)
+
         print(f"Total training time: {datetime.datetime.now() - start}")
+
+    def calculate_score_thresholds(self, training_subtrees_per_message: Dict[str, List[HorizontalTree]]) -> None:
+        for m, subtrees in training_subtrees_per_message.items():
+            if m in self.patterns:
+                score_threshold = sum(pqdm([(m, subtree) for subtree in subtrees], self.calculate_matching_score, n_jobs=8, argument_type='args'))
+                self.score_thresholds[m] = 0.75 * score_threshold / len(subtrees)
+
+    def update_score_threshold(self, message: str, score: float):
+        self.score_thresholds[message] = self.score_thresholds[message] * 0.8 + score * 0.2 * 0.75
 
     def calculate_matching_score(self, m: str, subtree: HorizontalTree) -> float:
         pattern_set = self.patterns[m][0]
