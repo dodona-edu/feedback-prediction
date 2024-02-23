@@ -6,6 +6,7 @@ from typing import List, Dict, Tuple, Set
 from pqdm.processes import pqdm
 from tqdm import tqdm
 
+from src.constants import ROOT_DIR
 from src.analyze import FeedbackAnalyzer
 from src.custom_types import AnnotatedTree, Tree, HorizontalTree, PatternCollection
 from src.util import to_string_encoding
@@ -15,7 +16,7 @@ from src.tree_algorithms.subtree_on_line import find_subtree_on_line
 
 
 class FeedbackModel:
-    PATTERNS_DIR = ""
+    MODEL_DIR = f'{ROOT_DIR}/output/models'
 
     def __init__(self):
         self.patterns: Dict[str, PatternCollection] = {}
@@ -24,14 +25,13 @@ class FeedbackModel:
 
     def load_model(self, model_file: str) -> None:
         print("Loading patterns data")
-        with open(f'{self.PATTERNS_DIR}/{model_file}', 'rb') as patterns_file:
-            self.patterns, self.pattern_weights = pickle.load(patterns_file)
+        with open(f'{self.MODEL_DIR}/{model_file}', 'rb') as patterns_file:
+            self.patterns, self.pattern_weights, self.score_thresholds = pickle.load(patterns_file)
 
     def save_model(self, model_file: str) -> None:
         print("Saving patterns data")
-        with open(f'{self.PATTERNS_DIR}/{model_file}', 'wb') as patterns_file:
-            pickle.dump((self.patterns, self.pattern_weights), patterns_file, pickle.HIGHEST_PROTOCOL)
-
+        with open(f'{self.MODEL_DIR}/{model_file}', 'wb') as patterns_file:
+            pickle.dump((self.patterns, self.pattern_weights, self.score_thresholds), patterns_file, pickle.HIGHEST_PROTOCOL)
 
     def _message_subtrees(self, dataset: Dict[str, AnnotatedTree]) -> Dict[str, List[HorizontalTree]]:
         result = defaultdict(list)
