@@ -1,5 +1,4 @@
 import datetime
-import multiprocessing
 import pickle
 from collections import defaultdict
 from typing import List, Dict, Tuple, Set
@@ -10,12 +9,9 @@ from tqdm import tqdm
 from src.analyze import FeedbackAnalyzer
 from src.custom_types import AnnotatedTree, Tree, HorizontalTree, PatternCollection
 from src.util import to_string_encoding
-from src.tree_algorithms.treeminer import Treeminerd
+from src.tree_algorithms.treeminer import mine_patterns
 from src.tree_algorithms.subtree_matches import subtree_matches
 from src.tree_algorithms.subtree_on_line import find_subtree_on_line
-
-
-analyzer = FeedbackAnalyzer()
 
 
 class FeedbackModel:
@@ -46,31 +42,26 @@ class FeedbackModel:
         return result
 
     @staticmethod
-    def _find_patterns(message: str, ts: List[HorizontalTree]) -> Tuple[str, PatternCollection]:
-        message_patterns = []
+    def _find_patterns(message: str, subtrees: List[HorizontalTree]) -> Tuple[str, PatternCollection]:
+        """
+        Find the patterns present in the given subtrees.
+        Also determines the identifying nodes of the subtrees.
+        """
+        message_patterns = set()
         identifying_nodes = set()
 
-        if len(ts) >= 3:
-            miner = Treeminerd(ts, support=0.8)
-            if miner.early_stopping:
-                p = multiprocessing.Process(target=miner.get_patterns)
-                p.start()
-                p.join(30)
-                if p.is_alive():
-                    p.terminate()
-                message_patterns = set(miner.result)
-            else:
-                message_patterns = miner.get_patterns()
+        if len(subtrees) >= 3:
+            message_patterns = mine_patterns(subtrees)
 
-            for t in ts:
-                identifying_nodes.update(t)
+            for subtree in subtrees:
+                identifying_nodes.update(subtree)
             identifying_nodes.remove(-1)
 
         return message, (message_patterns, identifying_nodes)
 
     def train(self, training: Dict[str, AnnotatedTree], n_procs=8) -> None:
         """
-        Determine the patterns present in the trees in the training set.
+        Train the feedback model.
         """
         start = datetime.datetime.now()
 

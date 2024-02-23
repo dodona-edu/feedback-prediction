@@ -10,15 +10,19 @@ from src.custom_types import HorizontalTree, ScopeElement, Scope
 from src.util import to_string_encoding
 
 
-def numbers_to_string(numbers):
-    result = []
-    for item in numbers:
-        if item == -1:
-            result.append(-1)
-        else:
-            result.append(str(item))
+def mine_patterns(subtrees: List[HorizontalTree]) -> Set[HorizontalTree]:
+    miner = Treeminerd(subtrees, support=0.8)
+    if miner.early_stopping:
+        p = multiprocessing.Process(target=miner.get_patterns)
+        p.start()
+        p.join(30)
+        if p.is_alive():
+            p.terminate()
+        patterns = set(miner.result)
+    else:
+        patterns = miner.get_patterns()
 
-    return result
+    return patterns
 
 
 class MinerAlgorithm:
