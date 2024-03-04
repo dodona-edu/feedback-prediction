@@ -1,5 +1,6 @@
 import collections
 import pickle
+from glob import glob
 from typing import List, Tuple, Counter
 
 import numpy as np
@@ -12,10 +13,10 @@ from constants import COLORS, ROOT_DIR
 
 
 def gather_stats_for_messages(analyzer: Analyzer, messages: List[str], load_stats, save_stats) -> Tuple[Counter, List[Counter], Counter]:
-    stats_file_name = f"_stats"
+    stats_file_name = f"messages_stats"
 
     if load_stats:
-        with open(f'{ROOT_DIR}/pylint/output/stats/{stats_file_name}', 'rb') as stats_file:
+        with open(f'{ROOT_DIR}/output/stats/{stats_file_name}', 'rb') as stats_file:
             stats = pickle.load(stats_file)
     else:
         training, test = analyzer.create_train_test_set()
@@ -33,7 +34,7 @@ def gather_stats_for_messages(analyzer: Analyzer, messages: List[str], load_stat
         stats = test_all_files(test_for_message, model, n=5)
 
         if save_stats:
-            with open(f'{ROOT_DIR}/pylint/output/stats/{stats_file_name}', 'wb') as stats_file:
+            with open(f'{ROOT_DIR}/output/stats/{stats_file_name}', 'wb') as stats_file:
                 pickle.dump(stats, stats_file, pickle.HIGHEST_PROTOCOL)
 
     return stats
@@ -67,8 +68,8 @@ def plot_accuracies_for_messages(analyzer: Analyzer, messages: List[str], load_s
     }
 
     width = 0.5
-    fig, ax = plt.subplots()
-    bottom = np.zeros(len(messages))
+    fig, ax = plt.subplots(figsize=(10, 6))
+    left = np.zeros(len(messages))
 
     bar_titles = [f"{m} ({total_training[m]};{total[m]})" for m in messages]
 
@@ -82,22 +83,19 @@ def plot_accuracies_for_messages(analyzer: Analyzer, messages: List[str], load_s
     ]
 
     for color, (position, counts) in zip(colors, positions.items()):
-        ax.bar(bar_titles, counts, width, label=position, bottom=bottom, color=color)
-        bottom += counts
+        ax.barh(bar_titles, counts, width, label=position, left=left, color=color)
+        left += counts
 
-    ax.set_title("Positions of messages in matches", pad=20)
+    for bar, label in zip(ax.containers[0], bar_titles):
+        plt.text(-0.02, bar.get_y() + bar.get_height() / 2, label, ha="right", va="center")
 
-    plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right', clip_on=True)
-    handles, labels = ax.get_legend_handles_labels()
+    ax.set_title("Positions of pylint annotation instances in matches", pad=40)
+    ax.set_yticks([])
 
-    # Shrink current axis by 20%
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.95, box.height])
-
-    ax.legend(handles[::-1], labels[::-1], loc="center right", bbox_to_anchor=(1.5, 0.7))
+    plt.legend(loc='upper right', bbox_to_anchor=(1, 1.1), ncols=6)
 
     fig.tight_layout()
-    plt.savefig(f'{ROOT_DIR}/output/plots/saved_plot.png', bbox_inches='tight')
+    plt.savefig(f'{ROOT_DIR}/output/plots/messages_plot.png', bbox_inches='tight')
 
 
 if __name__ == '__main__':
@@ -106,4 +104,6 @@ if __name__ == '__main__':
     #                         'R0912-too-many-branches']
 
     message_analyzer = PylintAnalyzer()
+    message_analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/*/*.py'))
+
     plot_accuracies_for_messages(message_analyzer, interesting_messages, load_stats=False, save_stats=False)
