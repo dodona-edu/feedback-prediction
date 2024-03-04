@@ -6,11 +6,11 @@ from typing import List, Dict, Counter, Tuple
 from pqdm.processes import pqdm
 from tqdm import tqdm
 
-from src.analyze import Analyzer, FeedbackAnalyzer
-from src.custom_types import AnnotatedTree
-from src.feedback_model import FeedbackModel
-from src.constants import ROOT_DIR
-from src.tree_algorithms.subtree_on_line import find_subtree_on_line
+from analyze import Analyzer, FeedbackAnalyzer
+from custom_types import AnnotatedTree
+from feedback_model import FeedbackModel
+from constants import ROOT_DIR
+from tree_algorithms.subtree_on_line import find_subtree_on_line
 
 
 def test_one_file(annotated_tree: AnnotatedTree, model: FeedbackModel, n=5) -> Tuple[Counter, List[Counter]]:

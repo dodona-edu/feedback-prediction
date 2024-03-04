@@ -6,8 +6,8 @@ import multiprocessing
 from collections import defaultdict
 from typing import List, Set, Dict, Tuple
 
-from src.custom_types import HorizontalTree, ScopeElement, Scope
-from src.util import to_string_encoding
+from custom_types import HorizontalTree, ScopeElement, Scope
+from util import to_string_encoding
 
 
 def mine_patterns(subtrees: List[HorizontalTree]) -> Set[HorizontalTree]:

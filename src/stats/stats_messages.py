@@ -5,10 +5,10 @@ from typing import List, Tuple, Counter
 import numpy as np
 from matplotlib import pyplot as plt
 
-from src.analyze import Analyzer, PylintAnalyzer
-from src.feedback_model import FeedbackModel
-from src.tester import test_all_files
-from src.constants import COLORS, ROOT_DIR
+from analyze import Analyzer, PylintAnalyzer
+from feedback_model import FeedbackModel
+from tester import test_all_files
+from constants import COLORS, ROOT_DIR
 
 
 def gather_stats_for_messages(analyzer: Analyzer, messages: List[str], load_stats, save_stats) -> Tuple[Counter, List[Counter], Counter]:

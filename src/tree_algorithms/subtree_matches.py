@@ -1,5 +1,5 @@
-from src.custom_types import HorizontalTree
-from src.util import sequence_fully_contains_other_sequence
+from custom_types import HorizontalTree
+from util import sequence_fully_contains_other_sequence
 
 
 def subtree_matches(subtree: HorizontalTree, pattern: HorizontalTree) -> bool:

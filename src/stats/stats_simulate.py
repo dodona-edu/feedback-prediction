@@ -5,11 +5,11 @@ from typing import Dict, List, Set, Counter, Tuple
 import numpy as np
 from matplotlib import pyplot as plt
 
-from src.analyze import FeedbackAnalyzer
-from src.custom_types import AnnotatedTree
-from src.feedback_model import FeedbackModel
-from src.tester import test_all_files
-from src.constants import ROOT_DIR, COLORS, ENGLISH_EXERCISE_NAMES_MAP
+from analyze import FeedbackAnalyzer
+from custom_types import AnnotatedTree
+from feedback_model import FeedbackModel
+from tester import test_all_files
+from constants import ROOT_DIR, COLORS, ENGLISH_EXERCISE_NAMES_MAP
 
 
 def get_messages(dataset: Dict[str, AnnotatedTree]) -> Set[str]:

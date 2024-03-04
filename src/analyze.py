@@ -14,8 +14,8 @@ from pylint.reporters import JSONReporter
 from tqdm import tqdm
 from tree_sitter import Language, Parser, Node
 
-from src.custom_types import AnnotatedTree, Annotation, LineTree
-from src.constants import ROOT_DIR
+from custom_types import AnnotatedTree, Annotation, LineTree
+from constants import ROOT_DIR, ENGLISH_EXERCISE_NAMES_MAP
 
 
 class Analyzer(ABC):

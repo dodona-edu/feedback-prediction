@@ -1,4 +1,4 @@
-from src.custom_types import Tree, LineTree
+from custom_types import Tree, LineTree
 
 
 def _keep_only_nodes_of_line(tree: LineTree, line: int):

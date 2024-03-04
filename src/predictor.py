@@ -4,11 +4,11 @@ from glob import glob
 from typing import List, Tuple
 from collections import defaultdict, Counter
 
-from src.analyze import FeedbackAnalyzer
-from src.constants import ROOT_DIR
-from src.feedback_model import FeedbackModel
-from src.custom_types import AnnotatedTree
-from src.tree_algorithms.subtree_on_line import find_subtree_on_line
+from analyze import FeedbackAnalyzer
+from constants import ROOT_DIR
+from feedback_model import FeedbackModel
+from custom_types import AnnotatedTree
+from tree_algorithms.subtree_on_line import find_subtree_on_line
 
 
 message_occurrence_counter = Counter()

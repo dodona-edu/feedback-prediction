@@ -5,10 +5,10 @@ from typing import List, Dict, Tuple
 import numpy as np
 from matplotlib import pyplot as plt
 
-from src.analyze import PylintAnalyzer, FeedbackAnalyzer, Analyzer
-from src.feedback_model import FeedbackModel
-from src.tester import test_all_files
-from src.constants import COLORS, ROOT_DIR, ENGLISH_EXERCISE_NAMES_MAP
+from analyze import PylintAnalyzer, FeedbackAnalyzer, Analyzer
+from feedback_model import FeedbackModel
+from tester import test_all_files
+from constants import COLORS, ROOT_DIR, ENGLISH_EXERCISE_NAMES_MAP
 
 labels_list = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Other']
 

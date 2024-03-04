@@ -6,13 +6,13 @@ from typing import List, Dict, Tuple, Set
 from pqdm.processes import pqdm
 from tqdm import tqdm
 
-from src.constants import ROOT_DIR
-from src.analyze import FeedbackAnalyzer
-from src.custom_types import AnnotatedTree, Tree, HorizontalTree, PatternCollection
-from src.util import to_string_encoding
-from src.tree_algorithms.treeminer import mine_patterns
-from src.tree_algorithms.subtree_matches import subtree_matches
-from src.tree_algorithms.subtree_on_line import find_subtree_on_line
+from constants import ROOT_DIR
+from analyze import FeedbackAnalyzer
+from custom_types import AnnotatedTree, Tree, HorizontalTree, PatternCollection
+from util import to_string_encoding
+from tree_algorithms.treeminer import mine_patterns
+from tree_algorithms.subtree_matches import subtree_matches
+from tree_algorithms.subtree_on_line import find_subtree_on_line
 
 
 class FeedbackModel:

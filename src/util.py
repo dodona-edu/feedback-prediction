@@ -3,8 +3,8 @@ from typing import List, Iterator, Sequence
 
 import pydot
 
-from src.constants import ROOT_DIR
-from src.custom_types import Tree, HorizontalTree
+from constants import ROOT_DIR
+from custom_types import Tree, HorizontalTree
 
 
 def to_string_encoding(tree: Tree) -> Iterator[str | int]:
