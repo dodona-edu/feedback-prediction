@@ -5,3 +5,7 @@
 __pycache__
 /result.pickle
 /pylint
+
+# dependencies
+demo/node_modules
+demo/public/exercises
