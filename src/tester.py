@@ -25,11 +25,12 @@ def test_one_file(annotated_tree: AnnotatedTree, model: FeedbackModel, n=5) -> T
             matching_scores = model.calculate_matching_scores(subtree)
             messages_sorted = sorted(matching_scores.keys(), key=lambda ms: matching_scores[ms], reverse=True)
 
-            total[m] += 1
             if m in messages_sorted:
                 i = messages_sorted.index(m)
                 if i < n:
                     first_n[i][m] += 1
+
+        total[m] += 1
 
     return total, first_n
 
