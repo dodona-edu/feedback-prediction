@@ -1,9 +1,12 @@
+import math
 from collections import Counter
+from glob import glob
 from typing import List, Iterator, Sequence
 
 import pydot
 
-from constants import ROOT_DIR
+from analyze import FeedbackAnalyzer
+from constants import ROOT_DIR, ENGLISH_EXERCISE_NAMES_MAP
 from custom_types import Tree, HorizontalTree
 
 
@@ -69,6 +72,47 @@ def visualise_string_subtree(graph: pydot.Dot, tree: HorizontalTree) -> None:
             parent_ids.append(node_id)
         else:
             parent_ids.pop()
+
+
+def get_dataset_stats():
+    ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
+
+    for e_id in ids:
+        analyzer = FeedbackAnalyzer()
+        analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/{e_id}/*.py'))
+        test = analyzer.analyze_files()
+
+        messages = set()
+        annotations_count = 0
+
+        min_annotations = math.inf
+        max_annotations = 0
+
+        annotations_counter = Counter()
+
+        for _, (_, annotations) in test.items():
+            for (m, _) in annotations:
+                messages.add(m)
+                annotations_counter[m] += 1
+                annotations_count += 1
+            if len(annotations) < min_annotations:
+                min_annotations = len(annotations)
+            if len(annotations) > max_annotations:
+                max_annotations = len(annotations)
+
+        print(f"Exercise '{ENGLISH_EXERCISE_NAMES_MAP[e_id]}' ({e_id}): ")
+        for i, m in enumerate(sorted(messages)):
+            print(f"{i}: '{m}'")
+        print(f"# solutions: {len(test)}")
+        print(f"# messages: {len(messages)}")
+        print(f"# annotations: {annotations_count}")
+        print(f"min annotations/file: {min_annotations}")
+        print(f"max annotations/file: {max_annotations}")
+        print(f"average annotations/file: {annotations_count / len(test)}")
+        print(f"min annotations/message: {min(annotations_counter.values())}")
+        print(f"max annotations/message: {max(annotations_counter.values())}")
+        print(f"average annotations/message: {sum(annotations_counter.values()) / len(annotations_counter)}")
+        print()
 
 
 if __name__ == '__main__':
