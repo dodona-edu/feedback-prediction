@@ -80,7 +80,7 @@ def main(analyzer: Analyzer, test_file=None):
     model = FeedbackModel()
     model.train(training)
 
-    start = datetime.datetime.now()
+    start = time.time()
 
     print("Testing...")
     if test_file is None:
@@ -89,7 +89,7 @@ def main(analyzer: Analyzer, test_file=None):
         test = test[test_file]
         test_one_file(test, model)
 
-    print(f"Total testing time: {datetime.datetime.now() - start}")
+    print(f"Total testing time: {time.time()- start}")
 
 
 if __name__ == '__main__':
