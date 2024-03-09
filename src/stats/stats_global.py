@@ -1,4 +1,5 @@
 import pickle
+import time
 from glob import glob
 from typing import List, Dict, Tuple
 
@@ -21,13 +22,22 @@ colors = [
     COLORS["DARK RED"]
 ]
 
+timings = {}
 
-def gather_data(analyzer: Analyzer):
+
+def gather_data(analyzer: Analyzer, eid: str):
     train, test = analyzer.create_train_test_set()
     model = FeedbackModel()
-    model.train(train)
 
-    total_per_message, first_n_per_message, total_first_n_per_message = test_all_files(test, model, n=5, n_procs=8)
+    start_train = time.time()
+    model.train(train)
+    end_train = time.time()
+
+    start_test = time.time()
+    total_per_message, first_n_per_message, total_first_n_per_message, _ = test_all_files(test, model, n=5, n_procs=8)
+    end_test = time.time()
+
+    timings[eid] = (end_train - start_train, end_test - start_test)
 
     total = sum(total_per_message.values())
     percentages = [sum(value.values()) / total for value in first_n_per_message]
@@ -111,11 +121,13 @@ def main_stacked_bars(exercise_ids: List[str], is_pylint: bool = False, load_dat
             print(f"Results for excercise with ID {eid}")
 
             analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/{eid}/*.py'))
-            results_per_exercise_id[eid] = gather_data(analyzer)
+            results_per_exercise_id[eid] = gather_data(analyzer, eid)
 
         if is_pylint:
             analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/*/*.py'))
-            results_per_exercise_id["Combined"] = gather_data(analyzer)
+            results_per_exercise_id["Combined"] = gather_data(analyzer, 'Combined')
+
+        print(timings)
 
         if save_data:
             with open(f'{ROOT_DIR}/output/stats/{file_name}', 'wb') as save_file:

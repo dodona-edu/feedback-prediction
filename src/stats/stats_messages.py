@@ -12,7 +12,7 @@ from tester import test_all_files
 from constants import COLORS, ROOT_DIR
 
 
-def gather_stats_for_messages(analyzer: Analyzer, messages: List[str], load_stats, save_stats) -> Tuple[Counter, List[Counter], Counter]:
+def gather_stats_for_messages(analyzer: Analyzer, messages: List[str], load_stats, save_stats) -> Tuple[Counter, List[Counter], Counter, Counter]:
     stats_file_name = f"messages_stats"
 
     if load_stats:
@@ -31,7 +31,11 @@ def gather_stats_for_messages(analyzer: Analyzer, messages: List[str], load_stat
                         test_for_message[file] = (test[file][0], [])
                     test_for_message[file][1].append((m, line))
 
-        stats = test_all_files(test_for_message, model, n=5)
+        total, first_n, total_first_n, _ = test_all_files(test_for_message, model, n=5)
+
+        total_training = determine_training_totals(analyzer.train)
+
+        stats = (total, first_n, total_first_n, total_training)
 
         if save_stats:
             with open(f'{ROOT_DIR}/output/stats/{stats_file_name}', 'wb') as stats_file:
@@ -50,8 +54,7 @@ def determine_training_totals(training):
 
 
 def plot_accuracies_for_messages(analyzer: Analyzer, messages: List[str], load_stats=False, save_stats=True) -> None:
-    total, first_n, total_first_n = gather_stats_for_messages(analyzer, messages, load_stats, save_stats)
-    total_training = determine_training_totals(analyzer.train)
+    total, first_n, total_first_n, total_training = gather_stats_for_messages(analyzer, messages, load_stats, save_stats)
 
     messages = [m for m in total]
 

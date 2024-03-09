@@ -1,3 +1,4 @@
+import time
 import pickle
 from glob import glob
 from typing import Dict, List, Set, Counter, Tuple
@@ -38,7 +39,7 @@ def get_no_patterns_count(model: FeedbackModel, train_messages, total_per_messag
     return no_patterns_count
 
 
-def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], Dict[str, List[int]], List[int]]:
+def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], Dict[str, List[int]], List[int], List[Tuple[float, Tuple[float, float, float]]]]:
     set_sizes = []  # Strings of amount of files in (train, test) set
     totals = []
     match_counts = {
@@ -49,6 +50,7 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
         "Not yet seen": []
     }
     unique_training_counts = []
+    times_exercise = []
 
     model = FeedbackModel()
 
@@ -63,8 +65,11 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
         files = files[5:]
 
         print(f"Training files: {len(training)}; Test files: {len(test)}")
+
+        start = time.time()
         model.train(training)
-        total_per_message, first_n_per_message, total_first_n_per_message = test_all_files(test, model)
+        end = time.time()
+        total_per_message, first_n_per_message, total_first_n_per_message, times = test_all_files(test, model)
 
         total = sum(total_per_message.values())
         train_messages = get_messages(training)
@@ -86,11 +91,15 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
         set_sizes.append(str((len(training), len(test))))
         totals.append(total)
 
-    return set_sizes, totals, match_counts, unique_training_counts
+        times_exercise.append((end - start, (min(times), sum(times) / len(times), max(times))))
+
+    print(times_exercise)
+
+    return set_sizes, totals, match_counts, unique_training_counts, times_exercise
 
 
-def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List[int]], List[int]], file_name: str = "simulate"):
-    bar_titles, totals, match_counts, unique_training_counts = stats
+def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List[int]], List[int], List[Tuple[float, Tuple[float, float, float]]]], file_name: str = "simulate"):
+    bar_titles, totals, match_counts, unique_training_counts, _ = stats
 
     px = 1/plt.rcParams['figure.dpi']
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(1280 * px, 960 * px), gridspec_kw={'width_ratios': [3, 1]})
@@ -135,7 +144,40 @@ def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List
     ax2.invert_yaxis()
 
     fig.tight_layout()
-    plt.savefig(f'{ROOT_DIR}/output/plots/{file_name}.png', bbox_inches='tight')
+    plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=300)
+
+
+def plot_timings(e_id: str, stats: Tuple[List[str], List[Tuple[float, Tuple[float, float, float]]]], file_name: str = "timing"):
+    bar_titles, timings = stats
+
+    train_x = list(map(lambda x: x.split(', ')[0].removeprefix('('), bar_titles))
+    test_x = list(map(lambda x: x.split(', ')[1].removesuffix(')'), bar_titles))
+
+    train_times = list(map(lambda x: x[0], timings))
+    test_times = list(map(lambda x: x[1], timings))
+    test_times_min = list(map(lambda x: x[0], test_times))
+    test_times_avg = list(map(lambda x: x[1], test_times))
+    test_times_max = list(map(lambda x: x[2], test_times))
+
+    px = 1/plt.rcParams['figure.dpi']
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(1280 * px, 1280 * px))
+
+    ax1.scatter(train_x, train_times, c="C1")
+
+    ax1.set_xlabel("Files in train set", loc="right")
+    ax1.set_ylabel("Time (s)")
+    ax1.set_title("Training times")
+
+    ax2.errorbar(test_x, test_times_avg, yerr=[test_times_min, test_times_max], fmt='o', capsize=6, ecolor="C0", c="C1")
+
+    ax2.set_xlabel("Files in test set", loc="right")
+    ax2.set_ylabel("Time (s)")
+    ax2.set_title(f"Testing times: (min, avg, max) per click")
+
+    plt.suptitle(f"Simulation timings of exercise {ENGLISH_EXERCISE_NAMES_MAP[e_id]}", fontsize=18)
+
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=300)
 
 
 def main_simulate(e_id: str, save_stats=False, load_stats=False):
@@ -151,7 +193,8 @@ def main_simulate(e_id: str, save_stats=False, load_stats=False):
             with open(f'{ROOT_DIR}/output/stats/{e_id}_simulation', 'wb') as stats_file:
                 pickle.dump(stats, stats_file, pickle.HIGHEST_PROTOCOL)
 
-    plot_simulation(e_id, stats, file_name=f"__simulation_{e_id}")
+    plot_simulation(e_id, stats, file_name=f"{e_id}")
+    plot_timings(e_id, (stats[0], stats[4]), file_name=f"{e_id}_timings")
 
 
 if __name__ == '__main__':

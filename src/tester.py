@@ -1,5 +1,5 @@
 import collections
-import datetime
+import time
 from glob import glob
 from typing import List, Dict, Counter, Tuple
 
@@ -13,17 +13,22 @@ from constants import ROOT_DIR
 from tree_algorithms.subtree_on_line import find_subtree_on_line
 
 
-def test_one_file(annotated_tree: AnnotatedTree, model: FeedbackModel, n=5) -> Tuple[Counter, List[Counter]]:
+def test_one_file(annotated_tree: AnnotatedTree, model: FeedbackModel, n=5) -> Tuple[Counter, List[Counter], List[float]]:
     tree, annotations = annotated_tree
 
     total = collections.Counter()
     first_n = [collections.Counter() for _ in range(n)]
-
+    times = []
     for m, line in annotations:
         subtree = find_subtree_on_line(tree, line)
         if subtree is not None:
+            start = time.perf_counter()
+
             matching_scores = model.calculate_matching_scores(subtree)
             messages_sorted = sorted(matching_scores.keys(), key=lambda ms: matching_scores[ms], reverse=True)
+
+            end = time.perf_counter()
+            times.append(end - start)
 
             if m in messages_sorted:
                 i = messages_sorted.index(m)
@@ -32,10 +37,10 @@ def test_one_file(annotated_tree: AnnotatedTree, model: FeedbackModel, n=5) -> T
 
         total[m] += 1
 
-    return total, first_n
+    return total, first_n, times
 
 
-def test_all_files(test: Dict[str, AnnotatedTree], model: FeedbackModel, n=5, n_procs=8) -> Tuple[Counter, List[Counter], Counter]:
+def test_all_files(test: Dict[str, AnnotatedTree], model: FeedbackModel, n=5, n_procs=8) -> Tuple[Counter, List[Counter], Counter, List[float]]:
     if n_procs > 1:
         results = pqdm(map(lambda ms: (ms, model, n), test.values()), test_one_file, n_jobs=8, argument_type='args')
     else:
@@ -49,7 +54,9 @@ def test_all_files(test: Dict[str, AnnotatedTree], model: FeedbackModel, n=5, n_
 
     total = collections.Counter()
     first_n = [collections.Counter() for _ in range(n)]
-    for file_total, counters in results:
+    all_times = []
+    for file_total, counters, times in results:
+        all_times.extend(times)
         total += file_total
         for i, counter in enumerate(counters):
             first_n[i] += counter
@@ -64,7 +71,7 @@ def test_all_files(test: Dict[str, AnnotatedTree], model: FeedbackModel, n=5, n_
     sum_first_n = sum([sum(f.values()) for f in first_n])
     print(f"\nTotal: {sum_first / sum_total}, {sum_first_n / sum_total}")
 
-    return total, first_n, total_first_n
+    return total, first_n, total_first_n, all_times
 
 
 def main(analyzer: Analyzer, test_file=None):
