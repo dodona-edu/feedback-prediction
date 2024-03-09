@@ -106,7 +106,7 @@ class PylintAnalyzer(Analyzer):
     def messages_for_file(self, file: str) -> List[Annotation]:
         pylint_output = StringIO()
         reporter = JSONReporter(pylint_output)
-        lint.Run(["--module-naming-style=any", "--disable=C0304", file], reporter=reporter, exit=False)
+        lint.Run(["--module-naming-style=any", "--disable=C0304,C0301,C0303,C0305,C0114,C0115,C0116", file], reporter=reporter, exit=False)
         lint_result = list(map(lambda m: (m["line"] - 1, f"{m['message-id']}-{m['symbol']}"), json.loads(pylint_output.getvalue())))
         return [(message, line) for (line, message) in lint_result]
 
