@@ -46,8 +46,8 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
         "First": [],
         "Top 5": [],
         "Out of top 5": [],
-        "No patterns found": [],
-        "Not yet seen": []
+        "No patterns": [],
+        "No training instances": []
     }
     unique_training_counts = []
     times_exercise = []
@@ -83,8 +83,8 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
         match_counts["First"].append(first_count)
         match_counts["Top 5"].append(first_n_count)
         match_counts["Out of top 5"].append(failed_count)
-        match_counts["No patterns found"].append(no_patterns_count)
-        match_counts["Not yet seen"].append(not_seen_count)
+        match_counts["No patterns"].append(no_patterns_count)
+        match_counts["No training instances"].append(not_seen_count)
 
         unique_training_counts.append(len(train_messages))
 
@@ -125,7 +125,7 @@ def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List
     ax1.set_title(f"Simulation of exercise {ENGLISH_EXERCISE_NAMES_MAP[e_id]}", pad=50)
     ax1.set_xlim([0, 1])
 
-    ax1.set_xlabel("Percentage of messages")
+    ax1.set_xlabel("Percentage of annotation instances")
     ax1.set_ylabel("Files in (train, test) sets", rotation=0, horizontalalignment='left', y=1.02)
 
     ax1.invert_yaxis()
@@ -139,7 +139,7 @@ def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List
     ticks = [i for i in range(0, max_count, 10 if max_count >= 20 else 5)]
     ax2.set_xticks([*ticks, max_count])
 
-    ax2.set_xlabel("Unique messages in train")
+    ax2.set_xlabel("# annotations encountered during training")
 
     ax2.invert_yaxis()
 
@@ -198,7 +198,9 @@ def main_simulate(e_id: str, save_stats=False, load_stats=False):
 
 
 if __name__ == '__main__':
-    # TODO probleem met ex 1875043169, rond 50 train files duurt heel lang?
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
-    # for eid in ids:
-    main_simulate('505886137', load_stats=False)
+
+    for eid in ids:
+        s = time.time()
+        main_simulate(eid, load_stats=False, save_stats=False)
+        print(f"Total time: {time.time() - s}")

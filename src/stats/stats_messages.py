@@ -62,16 +62,16 @@ def plot_accuracies_for_messages(analyzer: Analyzer, messages: List[str], load_s
         return [first_n[pos][m] / total[m] for m in messages]
 
     positions = {
-        "first": get_counts(0),
-        "second": get_counts(1),
-        "third": get_counts(2),
-        "fourth": get_counts(3),
-        "fifth": get_counts(4),
-        "other": [(total[m] - total_first_n[m]) / total[m] for m in messages]
+        "Rank 1": get_counts(0),
+        "Rank 2": get_counts(1),
+        "Rank 3": get_counts(2),
+        "Rank 4": get_counts(3),
+        "Rank 5": get_counts(4),
+        "Rank > 5": [(total[m] - total_first_n[m]) / total[m] for m in messages]
     }
 
     width = 0.5
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10.7, 6))
     left = np.zeros(len(messages))
 
     bar_titles = [f"{m} ({total_training[m]};{total[m]})" for m in messages]
@@ -89,6 +89,10 @@ def plot_accuracies_for_messages(analyzer: Analyzer, messages: List[str], load_s
         ax.barh(bar_titles, counts, width, label=position, left=left, color=color)
         left += counts
 
+    for bars, counts in zip(ax.containers, positions.values()):
+        labels = [f'{p * 100:.1f}%' if p > 0.05 else "" for p in counts]
+        ax.bar_label(bars, labels, label_type='center', color='white')
+
     for bar, label in zip(ax.containers[0], bar_titles):
         plt.text(-0.02, bar.get_y() + bar.get_height() / 2, label, ha="right", va="center")
 
@@ -98,13 +102,13 @@ def plot_accuracies_for_messages(analyzer: Analyzer, messages: List[str], load_s
     plt.legend(loc='upper right', bbox_to_anchor=(1, 1.1), ncols=6)
 
     fig.tight_layout()
-    plt.savefig(f'{ROOT_DIR}/output/plots/messages_plot.png', bbox_inches='tight')
+    plt.savefig(f'{ROOT_DIR}/output/plots/messages/messages_plot.png', bbox_inches='tight', dpi=300)
 
 
 if __name__ == '__main__':
-    interesting_messages = ['R1714-consider-using-in', 'R1728-consider-using-generator', 'R1720-no-else-raise', 'R1705-no-else-return']
-    # interesting_messages = ['R1710-inconsistent-return-statements', 'R1732-consider-using-with', 'C0200-consider-using-enumerate',
-    #                         'R0912-too-many-branches']
+    interesting_messages = ['R1714-consider-using-in', 'R1728-consider-using-generator', 'R1720-no-else-raise', 'R1705-no-else-return',
+                            'R1710-inconsistent-return-statements', 'R1732-consider-using-with', 'C0200-consider-using-enumerate', 'R0912-too-many-branches',
+                            'W0612-unused-variable', 'C0206-consider-using-dict-items', 'R0911-too-many-return-statements']
 
     message_analyzer = PylintAnalyzer()
     message_analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/*/*.py'))

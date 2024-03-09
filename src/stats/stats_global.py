@@ -11,7 +11,7 @@ from feedback_model import FeedbackModel
 from tester import test_all_files
 from constants import COLORS, ROOT_DIR, ENGLISH_EXERCISE_NAMES_MAP
 
-labels_list = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Other']
+labels_list = ['Rank 1', 'Rank 2', 'Rank 3', 'Rank 4', 'Rank 5', 'Rank > 5']
 
 colors = [
     COLORS["DARK GREEN"],
@@ -43,11 +43,11 @@ def gather_data(analyzer: Analyzer, eid: str):
     percentages = [sum(value.values()) / total for value in first_n_per_message]
     percentages.append(1 - sum(percentages))
 
-    return percentages, len(total_per_message.keys())
+    return percentages, len(total_per_message.keys()), total
 
 
 def plot_global_accuracies_pie(analyzer: Analyzer, file_name="global_pie", eid=None):
-    percentages, unique_test_message_count = gather_data(analyzer)
+    percentages, unique_test_message_count, _ = gather_data(analyzer, eid)
 
     patches, _ = plt.pie(percentages, colors=colors, pctdistance=1.17, startangle=180, counterclock=False,
                          wedgeprops={'linewidth': 1, 'edgecolor': 'k'} if 1.0 not in percentages else None)
@@ -61,12 +61,12 @@ def plot_global_accuracies_pie(analyzer: Analyzer, file_name="global_pie", eid=N
     plt.savefig(f'{ROOT_DIR}/output/plots/global/{file_name}.png', bbox_inches='tight', dpi=300)
 
 
-def plot_global_accuracies_stacked_bar(results: Dict[str, Tuple[List[float], int]], file_name="plot"):
+def plot_global_accuracies_stacked_bar(results: Dict[str, Tuple[List[float], int, int]], file_name="plot"):
     percentages_per_category = list([list(reversed([result[0][i] for result in results.values()])) for i in range(6)])
 
     eids = list(reversed(results.keys()))
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10.5, 6))
     left = np.zeros(len(results))
 
     width = 0.5
@@ -82,12 +82,12 @@ def plot_global_accuracies_stacked_bar(results: Dict[str, Tuple[List[float], int
     for bar, eid in zip(ax.containers[0], eids):
         exercise_name = ENGLISH_EXERCISE_NAMES_MAP[eid] if eid in ENGLISH_EXERCISE_NAMES_MAP else eid
         plt.text(-0.02, bar.get_y() + bar.get_height() / 2, exercise_name, ha="right", va="center")
-        plt.text(1.02, bar.get_y() + bar.get_height() / 2, f"{results[eid][1]}", ha="left", va="center")
+        plt.text(1.02, bar.get_y() + bar.get_height() / 2, f"{results[eid][1]};{results[eid][2]}", ha="left", va="center")
 
     ax.set_xlim((0, 1))
     ax.set_yticks([])
 
-    plt.text(1.06, 1, "Amount of unique test messages", rotation=-90)
+    plt.text(1.12, 1.4, "# test annotations ; instances", rotation=-90)
 
     plt.legend(loc='upper right', bbox_to_anchor=(1, 1.1), ncols=6)
 
@@ -109,12 +109,12 @@ def main_pie(analyzer: Analyzer, exercise_ids: List[str] = None):
 
 
 def main_stacked_bars(exercise_ids: List[str], is_pylint: bool = False, load_data: bool = False, save_data: bool = False):
-    file_name = f"stacked_bars_global{'_pylint' if is_pylint else ''}"
+    stats_file = f"stacked_bars_global{'_pylint' if is_pylint else ''}"
     analyzer = PylintAnalyzer() if is_pylint else FeedbackAnalyzer()
     results_per_exercise_id = {}
 
     if load_data:
-        with open(f'{ROOT_DIR}/output/stats/{file_name}', 'rb') as save_file:
+        with open(f'{ROOT_DIR}/output/stats/{stats_file}', 'rb') as save_file:
             results_per_exercise_id = pickle.load(save_file)
     else:
         for eid in exercise_ids:
@@ -130,19 +130,13 @@ def main_stacked_bars(exercise_ids: List[str], is_pylint: bool = False, load_dat
         print(timings)
 
         if save_data:
-            with open(f'{ROOT_DIR}/output/stats/{file_name}', 'wb') as save_file:
+            with open(f'{ROOT_DIR}/output/stats/{stats_file}', 'wb') as save_file:
                 pickle.dump(results_per_exercise_id, save_file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    plot_global_accuracies_stacked_bar(results_per_exercise_id, file_name=f"_plot")
+    plot_global_accuracies_stacked_bar(results_per_exercise_id, file_name=f"_plot{'_pylint' if is_pylint else ''}")
 
 
 if __name__ == '__main__':
-    # message_analyzer = PylintAnalyzer()
-    # for i in range(5):
-    #     message_analyzer = PylintAnalyzer()
-    #     message_analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/*/*.py'))
-    #     plot_global_accuracies(message_analyzer, file_name=f"pylint_{i}_plot")
-
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
     # main_pie(message_analyzer, ids)
     main_stacked_bars(ids)
