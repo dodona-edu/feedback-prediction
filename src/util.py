@@ -30,8 +30,6 @@ def sequence_fully_contains_other_sequence(list1: Sequence, list2: Sequence) -> 
     return not (Counter(list2) - Counter(list1))
 
 
-# tree.png from data/excercises/505886137/12989287.py
-
 def visualise_parse_tree(tree: Tree | HorizontalTree, is_string_encoding=False, file_name="tree") -> None:
     """
     Create a dot file of the parse tree that can be visualised by Graphviz
@@ -79,39 +77,35 @@ def get_dataset_stats():
 
     for e_id in ids:
         analyzer = FeedbackAnalyzer()
-        analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/{e_id}/*.py'))
+        analyzer.set_files(glob(f'{ROOT_DIR}/data/exercises/{e_id}/*.py'))
         test = analyzer.analyze_files()
 
-        messages = set()
-        annotations_count = 0
+        annotation_ids = set()
 
-        min_annotations = math.inf
-        max_annotations = 0
+        min_annotation_instances = math.inf
+        max_annotation_instances = 0
 
-        annotations_counter = Counter()
+        annotation_instances_counter = Counter()
 
-        for _, (_, annotations) in test.items():
-            for (m, _) in annotations:
-                messages.add(m)
-                annotations_counter[m] += 1
-                annotations_count += 1
-            if len(annotations) < min_annotations:
-                min_annotations = len(annotations)
-            if len(annotations) > max_annotations:
-                max_annotations = len(annotations)
+        for _, annotation_instances in test.values():
+            for a_id, _ in annotation_instances:
+                annotation_ids.add(a_id)
+                annotation_instances_counter[a_id] += 1
+            if len(annotation_instances) < min_annotation_instances:
+                min_annotation_instances = len(annotation_instances)
+            if len(annotation_instances) > max_annotation_instances:
+                max_annotation_instances = len(annotation_instances)
 
         print(f"Exercise '{ENGLISH_EXERCISE_NAMES_MAP[e_id]}' ({e_id}): ")
-        for i, m in enumerate(sorted(messages)):
-            print(f"{i}: '{m}'")
         print(f"# solutions: {len(test)}")
-        print(f"# messages: {len(messages)}")
-        print(f"# annotations: {annotations_count}")
-        print(f"min annotations/file: {min_annotations}")
-        print(f"max annotations/file: {max_annotations}")
-        print(f"average annotations/file: {annotations_count / len(test)}")
-        print(f"min annotations/message: {min(annotations_counter.values())}")
-        print(f"max annotations/message: {max(annotations_counter.values())}")
-        print(f"average annotations/message: {sum(annotations_counter.values()) / len(annotations_counter)}")
+        print(f"# annotations: {len(annotation_ids)}")
+        print(f"# annotation instances: {annotation_instances_counter.total()}")
+        print(f"min instances/file: {min_annotation_instances}")
+        print(f"max instances/file: {max_annotation_instances}")
+        print(f"average instances/file: {annotation_instances_counter.total() / len(test)}")
+        print(f"min instances/annotation: {min(annotation_instances_counter.values())}")
+        print(f"max instances/annotation: {max(annotation_instances_counter.values())}")
+        print(f"average instances/annotation: {annotation_instances_counter.total() / len(annotation_instances_counter)}")
         print()
 
 

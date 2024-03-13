@@ -34,31 +34,16 @@ def gather_data(analyzer: Analyzer, eid: str):
     end_train = time.time()
 
     start_test = time.time()
-    total_per_message, first_n_per_message, total_first_n_per_message, _ = test_all_files(test, model, n=5, n_procs=8)
+    total_per_annotation, first_n_per_annotation, _, times = test_all_files(test, model, n=5, n_procs=8)
     end_test = time.time()
 
-    timings[eid] = (end_train - start_train, end_test - start_test)
+    timings[eid] = (end_train - start_train, end_test - start_test, (min(times), sum(times) / len(times), max(times)))
 
-    total = sum(total_per_message.values())
-    percentages = [sum(value.values()) / total for value in first_n_per_message]
+    total = sum(total_per_annotation.values())
+    percentages = [sum(value.values()) / total for value in first_n_per_annotation]
     percentages.append(1 - sum(percentages))
 
-    return percentages, len(total_per_message.keys()), total
-
-
-def plot_global_accuracies_pie(analyzer: Analyzer, file_name="global_pie", eid=None):
-    percentages, unique_test_message_count, _ = gather_data(analyzer, eid)
-
-    patches, _ = plt.pie(percentages, colors=colors, pctdistance=1.17, startangle=180, counterclock=False,
-                         wedgeprops={'linewidth': 1, 'edgecolor': 'k'} if 1.0 not in percentages else None)
-    labels = [f'{label} - {percentage * 100:.2f}%' for label, percentage in zip(labels_list, percentages)]
-    plt.legend(labels, loc="upper right", bbox_to_anchor=(1.4, 1))
-    if eid is None:
-        plt.suptitle('Positions of messages in matches')
-    else:
-        plt.suptitle(f'{ENGLISH_EXERCISE_NAMES_MAP[eid]}')
-    plt.title(f'{unique_test_message_count} unique messages', fontsize='medium')
-    plt.savefig(f'{ROOT_DIR}/output/plots/global/{file_name}.png', bbox_inches='tight', dpi=300)
+    return percentages, len(total_per_annotation.keys()), total
 
 
 def plot_global_accuracies_stacked_bar(results: Dict[str, Tuple[List[float], int, int]], file_name="plot"):
@@ -96,16 +81,17 @@ def plot_global_accuracies_stacked_bar(results: Dict[str, Tuple[List[float], int
     plt.savefig(f'{ROOT_DIR}/output/plots/global/{file_name}.png', bbox_inches='tight', dpi=300)
 
 
-def main_pie(analyzer: Analyzer, exercise_ids: List[str] = None):
-    if exercise_ids is not None:
-        for exercise_id in exercise_ids:
-            print(f"Results for excercise with ID {exercise_id}")
-            analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/{exercise_id}/*.py'))
-            plot_global_accuracies_pie(analyzer, file_name=f"_{exercise_id}", eid=exercise_id)
-            plt.clf()
-
-    else:
-        plot_global_accuracies_pie(analyzer, file_name="plot_all_exercises")
+def print_timings():
+    print()
+    print("Timings: ")
+    for exercise_id, (train_time, test_time, (min_click, avg_click, max_click)) in timings.items():
+        print(f"Exercise {ENGLISH_EXERCISE_NAMES_MAP[exercise_id] if exercise_id in ENGLISH_EXERCISE_NAMES_MAP else exercise_id} ({exercise_id}):")
+        print(f"training time: {train_time}")
+        print(f"testing time: {test_time}")
+        print(f"min time/click: {min_click}")
+        print(f"avg time/click: {avg_click}")
+        print(f"max time/click: {max_click}")
+        print()
 
 
 def main_stacked_bars(exercise_ids: List[str], is_pylint: bool = False, load_data: bool = False, save_data: bool = False):
@@ -120,23 +106,22 @@ def main_stacked_bars(exercise_ids: List[str], is_pylint: bool = False, load_dat
         for eid in exercise_ids:
             print(f"Results for excercise with ID {eid}")
 
-            analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/{eid}/*.py'))
+            analyzer.set_files(glob(f'{ROOT_DIR}/data/exercises/{eid}/*.py'))
             results_per_exercise_id[eid] = gather_data(analyzer, eid)
 
         if is_pylint:
-            analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/*/*.py'))
+            analyzer.set_files(glob(f'{ROOT_DIR}/data/exercises/*/*.py'))
             results_per_exercise_id["Combined"] = gather_data(analyzer, 'Combined')
 
-        print(timings)
+        print_timings()
 
         if save_data:
             with open(f'{ROOT_DIR}/output/stats/{stats_file}', 'wb') as save_file:
                 pickle.dump(results_per_exercise_id, save_file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    plot_global_accuracies_stacked_bar(results_per_exercise_id, file_name=f"_plot{'_pylint' if is_pylint else ''}")
+    plot_global_accuracies_stacked_bar(results_per_exercise_id, file_name=f"plot{'_pylint' if is_pylint else ''}")
 
 
 if __name__ == '__main__':
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
-    # main_pie(message_analyzer, ids)
     main_stacked_bars(ids)

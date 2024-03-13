@@ -1,13 +1,11 @@
 import datetime
 import pickle
 from collections import defaultdict
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple
 
 from pqdm.processes import pqdm
-from tqdm import tqdm
 
 from constants import ROOT_DIR
-from analyze import FeedbackAnalyzer
 from custom_types import AnnotatedTree, Tree, HorizontalTree, PatternCollection
 from util import to_string_encoding
 from tree_algorithms.treeminer import mine_patterns
@@ -19,7 +17,7 @@ class FeedbackModel:
     MODEL_DIR = f'{ROOT_DIR}/output/models'
 
     def __init__(self):
-        self.patterns: Dict[str, PatternCollection] = {}
+        self.patterns: Dict[int, PatternCollection] = {}
         self.pattern_weights = {}
         self.score_thresholds = {}
 
@@ -33,32 +31,32 @@ class FeedbackModel:
         with open(f'{self.MODEL_DIR}/{model_file}', 'wb') as patterns_file:
             pickle.dump((self.patterns, self.pattern_weights, self.score_thresholds), patterns_file, pickle.HIGHEST_PROTOCOL)
 
-    def _message_subtrees(self, dataset: Dict[str, AnnotatedTree]) -> Dict[str, List[HorizontalTree]]:
+    def _annotation_subtrees(self, dataset: Dict[str, AnnotatedTree]) -> Dict[int, List[HorizontalTree]]:
         result = defaultdict(list)
-        for key, (tree, annotations) in dataset.items():
-            for m, line in annotations:
+        for tree, annotation_instances in dataset.values():
+            for a_id, line in annotation_instances:
                 subtree = find_subtree_on_line(tree, line)
                 if subtree is not None:
-                    result[m].append(list(to_string_encoding(subtree)))
+                    result[a_id].append(list(to_string_encoding(subtree)))
         return result
 
     @staticmethod
-    def _find_patterns(message: str, subtrees: List[HorizontalTree]) -> Tuple[str, PatternCollection]:
+    def _find_patterns(annotation_id: int, subtrees: List[HorizontalTree]) -> Tuple[int, PatternCollection]:
         """
         Find the patterns present in the given subtrees.
         Also determines the identifying nodes of the subtrees.
         """
-        message_patterns = set()
+        annotation_patterns = set()
         identifying_nodes = set()
 
         if len(subtrees) >= 3:
-            message_patterns = mine_patterns(subtrees)
+            annotation_patterns = mine_patterns(subtrees)
 
             for subtree in subtrees:
                 identifying_nodes.update(subtree)
             identifying_nodes.remove(-1)
 
-        return message, (message_patterns, identifying_nodes)
+        return annotation_id, (annotation_patterns, identifying_nodes)
 
     def train(self, training: Dict[str, AnnotatedTree], n_procs=8, thresholds=False) -> None:
         """
@@ -66,16 +64,11 @@ class FeedbackModel:
         """
         start = datetime.datetime.now()
 
-        subtrees = self._message_subtrees(training)
+        subtrees = self._annotation_subtrees(training)
         print("Determining patterns for training data")
         patterns = {}
 
-        results: List[Tuple[str, PatternCollection]] = []
-        if n_procs > 1:
-            results = pqdm(list(subtrees.items()), self._find_patterns, n_jobs=8, argument_type='args')
-        else:
-            for m, ts in tqdm(subtrees.items()):
-                results.append(self._find_patterns(m, ts))
+        results: List[Tuple[int, PatternCollection]] = pqdm(list(subtrees.items()), self._find_patterns, n_jobs=n_procs, argument_type='args')
 
         node_counts = defaultdict(int)
         for _, (_, nodes) in results:
@@ -86,12 +79,12 @@ class FeedbackModel:
         for m, (pattern_set, node_set) in results:
             node_set.difference_update(nodes_to_remove)
             if pattern_set or node_set:
-                patterns[m] = (pattern_set, node_set)
+                patterns[a_id] = (pattern_set, node_set)
 
         print("Calculating pattern weights")
         pattern_weights = defaultdict(float)
-        for message_patterns, _ in patterns.values():
-            for pattern in message_patterns:
+        for annotation_patterns, _ in patterns.values():
+            for pattern in annotation_patterns:
                 pattern_weights[pattern] += 1
 
         for pattern in pattern_weights.keys():
@@ -116,14 +109,14 @@ class FeedbackModel:
     def update_score_threshold(self, message: str, score: float):
         self.score_thresholds[message] = self.score_thresholds[message] * 0.8 + score * 0.2 * 0.75
 
-    def calculate_matching_score(self, m: str, subtree: HorizontalTree) -> float:
-        pattern_set = self.patterns[m][0]
+    def calculate_matching_score(self, annotation_id: int, subtree: HorizontalTree) -> float:
+        pattern_set = self.patterns[annotation_id][0]
         matches = list(filter(lambda pattern: subtree_matches(subtree, pattern), pattern_set))
         matches_score = 0
         if pattern_set:
             matches_score = sum(self.pattern_weights[match] for match in matches) / len(pattern_set)
 
-        node_set = self.patterns[m][1]
+        node_set = self.patterns[annotation_id][1]
         nodes = set(subtree).intersection(node_set)
         nodes_score = 0
         if node_set:
@@ -131,7 +124,7 @@ class FeedbackModel:
 
         return matches_score + nodes_score
 
-    def calculate_matching_scores(self, subtree: Tree, identifying_only=False) -> Dict[str, float]:
+    def calculate_matching_scores(self, subtree: Tree, identifying_only=False) -> Dict[int, float]:
         horizontal_subtree = list(to_string_encoding(subtree))
         if identifying_only:
             nodes = set(horizontal_subtree)

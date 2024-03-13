@@ -14,8 +14,8 @@ from pylint.reporters import JSONReporter
 from tqdm import tqdm
 from tree_sitter import Language, Parser, Node
 
-from custom_types import AnnotatedTree, Annotation, LineTree
-from constants import ROOT_DIR, ENGLISH_EXERCISE_NAMES_MAP
+from custom_types import AnnotatedTree, AnnotationInstance, LineTree
+from constants import ROOT_DIR
 
 
 class Analyzer(ABC):
@@ -32,14 +32,16 @@ class Analyzer(ABC):
         self.train: Dict[str, AnnotatedTree] = {}
         self.test: Dict[str, AnnotatedTree] = {}
 
+        self.id_annotation_map: Dict[int, str] = {}
+
     def map_tree(self, node: Node) -> LineTree:
         children = [self.map_tree(child) for child in node.children if child.type != "comment"]
-        name = node.text.decode("utf-8") if node.type == "identifier" else node.type
+        name = node.text.decode("utf-8") if node.type in ["identifier", "string"] else node.type
         lines = set(range(node.start_point[0], node.end_point[0] + 1))
         return {"name": name, "lines": sorted(lines), "children": children}
 
     @abstractmethod
-    def messages_for_file(self, file: str) -> List[Annotation]:
+    def get_annotation_instances(self, file: str) -> List[AnnotationInstance]:
         pass
 
     def set_files(self, files: List[str]) -> None:
@@ -49,7 +51,7 @@ class Analyzer(ABC):
         with open(file, "rb") as f:
             tree = self.map_tree(self.parser.parse(f.read()).root_node)
 
-        return tree, self.messages_for_file(file)
+        return tree, self.get_annotation_instances(file)
 
     def analyze_files(self) -> Dict[str, AnnotatedTree]:
         """
@@ -103,12 +105,23 @@ class PylintAnalyzer(Analyzer):
         super().__init__()
         self.files = glob(f'{ROOT_DIR}/pylint/submissions/*/*/*.py')
 
-    def messages_for_file(self, file: str) -> List[Annotation]:
+        self.annotation_id_map = {}
+
+    def get_annotation_instances(self, file: str) -> List[AnnotationInstance]:
         pylint_output = StringIO()
         reporter = JSONReporter(pylint_output)
         lint.Run(["--module-naming-style=any", "--disable=C0304,C0301,C0303,C0305,C0114,C0115,C0116", file], reporter=reporter, exit=False)
         lint_result = list(map(lambda m: (m["line"] - 1, f"{m['message-id']}-{m['symbol']}"), json.loads(pylint_output.getvalue())))
-        return [(message, line) for (line, message) in lint_result]
+
+        result = []
+        for line, annotation in lint_result:
+            if annotation not in self.annotation_id_map:
+                next_id = len(self.id_annotation_map) + 1
+                self.id_annotation_map[next_id] = annotation
+                self.annotation_id_map[annotation] = next_id
+
+            result.append((self.annotation_id_map[annotation], line))
+        return result
 
     def load_train_test(self, file: str) -> None:
         print("Loading train and test data")
@@ -128,23 +141,26 @@ class FeedbackAnalyzer(Analyzer):
         self.annotations_file = f"{ROOT_DIR}/data/annotations.tsv"
         self.date_time_format = "%Y-%m-%d %H:%M:%S.%f"
 
-        self.submission_annotations_map: Dict[str, List[Tuple[str, int, datetime.datetime]]] = defaultdict(list)
+        self.submission_annotations_map: Dict[str, List[Tuple[int, int, datetime.datetime]]] = defaultdict(list)
         self.load_submission_annotations_map()
-        self.set_files(glob(f'{ROOT_DIR}/data/excercises/*/*.py'))
+        self.set_files(glob(f'{ROOT_DIR}/data/exercises/*/*.py'))
 
     def load_submission_annotations_map(self) -> None:
         with open(self.annotations_file) as annotations_file:
-            rows = csv.reader(annotations_file, delimiter='\t')
-            next(rows)
+            rows = csv.DictReader(annotations_file, delimiter='\t')
             for row in rows:
-                line = row[1]
-                submission_id = row[2]
-                annotation = row[4]
-                creation_time = datetime.datetime.strptime(row[5], self.date_time_format)
+                line = row["line_nr"]
                 if line != 'NULL':
-                    self.submission_annotations_map[submission_id].append((annotation, int(line), creation_time))
+                    submission_id = row["submission_id"]
+                    annotation = row["annotation_text"]
+                    saved_id = int(row["saved_annotation_id"])
+                    creation_time = datetime.datetime.strptime(row["created_at"], self.date_time_format)
 
-    def messages_for_file(self, file: str) -> List[Annotation]:
+                    if saved_id not in self.id_annotation_map:
+                        self.id_annotation_map[saved_id] = annotation
+                    self.submission_annotations_map[submission_id].append((saved_id, int(line), creation_time))
+
+    def get_annotation_instances(self, file: str) -> List[AnnotationInstance]:
         submission_id = file.split('/')[-1].split('.')[0]
         return list(map(lambda x: x[0:2], self.submission_annotations_map[submission_id]))
 

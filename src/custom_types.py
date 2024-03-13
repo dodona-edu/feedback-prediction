@@ -18,11 +18,11 @@ type HorizontalTree = Sequence[str | int]
 # A combination of patterns and 'identifying' nodes. Identifying means that these nodes might be important/useful and related to the annotation
 type PatternCollection = Tuple[Set[HorizontalTree], Set[str]]
 
-# A combination of a feedback comment and a line number on which the feedback was given
-type Annotation = Tuple[str, int]
+# A combination of a feedback comment id and a line number on which the feedback was given
+type AnnotationInstance = Tuple[int, int]
 
-# A combination of parsed code in LineTree form and a list of (message, line) corresponding to feedback provided
-type AnnotatedTree = Tuple[LineTree, List[Annotation]]
+# A combination of parsed code in LineTree form and a list of annotation instances corresponding to feedback provided
+type AnnotatedTree = Tuple[LineTree, List[AnnotationInstance]]
 
 type Scope = Tuple[int, int]
 

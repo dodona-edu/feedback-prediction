@@ -5,6 +5,7 @@ from typing import Dict, List, Set, Counter, Tuple
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
 
 from analyze import FeedbackAnalyzer
 from custom_types import AnnotatedTree
@@ -13,27 +14,27 @@ from tester import test_all_files
 from constants import ROOT_DIR, COLORS, ENGLISH_EXERCISE_NAMES_MAP
 
 
-def get_messages(dataset: Dict[str, AnnotatedTree]) -> Set[str]:
-    messages = set()
-    for (_, annotations) in dataset.values():
-        messages.update(annotation[0] for annotation in annotations)
+def get_annotation_ids(dataset: Dict[str, AnnotatedTree]) -> Set[int]:
+    annotation_ids = set()
+    for _, annotation_instances in dataset.values():
+        annotation_ids.update(a_id for a_id, _ in annotation_instances)
 
-    return messages
+    return annotation_ids
 
 
-def get_not_seen_count(train_messages: Set[str], total_per_message: Counter) -> int:
+def get_not_seen_count(train_annotation_ids: Set[int], total_per_annotation: Counter) -> int:
     not_seen_count = 0
-    for (m, count) in total_per_message.items():
-        if m not in train_messages:
+    for (a_id, count) in total_per_annotation.items():
+        if a_id not in train_annotation_ids:
             not_seen_count += count
 
     return not_seen_count
 
 
-def get_no_patterns_count(model: FeedbackModel, train_messages, total_per_message: Counter) -> int:
+def get_no_patterns_count(model: FeedbackModel, train_annotation_ids: Set[int], total_per_annotation: Counter) -> int:
     no_patterns_count = 0
-    for (m, count) in total_per_message.items():
-        if m in train_messages and m not in model.patterns:
+    for (a_id, count) in total_per_annotation.items():
+        if a_id in train_annotation_ids and a_id not in model.patterns:
             no_patterns_count += count
 
     return no_patterns_count
@@ -69,15 +70,15 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
         start = time.time()
         model.train(training)
         end = time.time()
-        total_per_message, first_n_per_message, total_first_n_per_message, times = test_all_files(test, model)
+        total_per_annotation, first_n_per_annotation, total_first_n_per_annotation, times = test_all_files(test, model)
 
-        total = sum(total_per_message.values())
-        train_messages = get_messages(training)
+        total = sum(total_per_annotation.values())
+        train_annotation_ids = get_annotation_ids(training)
 
-        first_count = sum(first_n_per_message[0].values())
-        first_n_count = sum(total_first_n_per_message.values()) - first_count
-        not_seen_count = get_not_seen_count(train_messages, total_per_message)
-        no_patterns_count = get_no_patterns_count(model, train_messages, total_per_message)
+        first_count = sum(first_n_per_annotation[0].values())
+        first_n_count = sum(total_first_n_per_annotation.values()) - first_count
+        not_seen_count = get_not_seen_count(train_annotation_ids, total_per_annotation)
+        no_patterns_count = get_no_patterns_count(model, train_annotation_ids, total_per_annotation)
         failed_count = total - first_count - first_n_count - not_seen_count - no_patterns_count
 
         match_counts["First"].append(first_count)
@@ -86,7 +87,7 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
         match_counts["No patterns"].append(no_patterns_count)
         match_counts["No training instances"].append(not_seen_count)
 
-        unique_training_counts.append(len(train_messages))
+        unique_training_counts.append(len(train_annotation_ids))
 
         set_sizes.append(str((len(training), len(test))))
         totals.append(total)
@@ -181,16 +182,18 @@ def plot_timings(e_id: str, stats: Tuple[List[str], List[Tuple[float, Tuple[floa
 
 
 def main_simulate(e_id: str, save_stats=False, load_stats=False):
+    stats_file = f'{ROOT_DIR}/output/stats/{e_id}_simulation'
+
     if load_stats:
-        with open(f'{ROOT_DIR}/output/stats/{e_id}_simulation', 'rb') as stats_file:
+        with open(stats_file, 'rb') as stats_file:
             stats = pickle.load(stats_file)
     else:
         analyzer = FeedbackAnalyzer()
-        analyzer.set_files(glob(f'{ROOT_DIR}/data/excercises/{e_id}/*.py'))
+        analyzer.set_files(glob(f'{ROOT_DIR}/data/exercises/{e_id}/*.py'))
 
         stats = simulate_online(analyzer)
         if save_stats:
-            with open(f'{ROOT_DIR}/output/stats/{e_id}_simulation', 'wb') as stats_file:
+            with open(stats_file, 'wb') as stats_file:
                 pickle.dump(stats, stats_file, pickle.HIGHEST_PROTOCOL)
 
     plot_simulation(e_id, stats, file_name=f"{e_id}")
@@ -201,6 +204,7 @@ if __name__ == '__main__':
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
 
     for eid in ids:
+        print(f"Exercise {eid}")
         s = time.time()
         main_simulate(eid, load_stats=False, save_stats=False)
         print(f"Total time: {time.time() - s}")
