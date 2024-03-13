@@ -40,7 +40,7 @@ def get_no_patterns_count(model: FeedbackModel, train_annotation_ids: Set[int], 
     return no_patterns_count
 
 
-def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], Dict[str, List[int]], List[int], List[Tuple[float, Tuple[float, float, float]]]]:
+def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[Tuple[int, int]], List[int], Dict[str, List[int]], List[int], List[Tuple[float, Tuple[float, float, float]]]]:
     set_sizes = []  # Strings of amount of files in (train, test) set
     totals = []
     match_counts = {
@@ -89,7 +89,7 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
 
         unique_training_counts.append(len(train_annotation_ids))
 
-        set_sizes.append(str((len(training), len(test))))
+        set_sizes.append((len(training), len(test)))
         totals.append(total)
 
         times_exercise.append((end - start, (min(times), sum(times) / len(times), max(times))))
@@ -99,8 +99,9 @@ def simulate_online(analyzer: FeedbackAnalyzer) -> Tuple[List[str], List[int], D
     return set_sizes, totals, match_counts, unique_training_counts, times_exercise
 
 
-def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List[int]], List[int], List[Tuple[float, Tuple[float, float, float]]]], file_name: str = "simulate"):
+def plot_simulation(e_id: str, stats: Tuple[List[Tuple[int, int]], List[int], Dict[str, List[int]], List[int], List[Tuple[float, Tuple[float, float, float]]]], file_name: str = "simulate"):
     bar_titles, totals, match_counts, unique_training_counts, _ = stats
+    bar_titles = [str(bar_title) for bar_title in bar_titles]
 
     px = 1/plt.rcParams['figure.dpi']
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(1280 * px, 960 * px), gridspec_kw={'width_ratios': [3, 1]})
@@ -110,7 +111,7 @@ def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List
         COLORS["LIGHT GREEN"],
         COLORS["DARK RED"],
         COLORS["GRAY"],
-        COLORS["LIGHT ORANGE"]
+        COLORS["DARK GRAY"]
     ]
 
     left = np.zeros(len(bar_titles))
@@ -132,27 +133,33 @@ def plot_simulation(e_id: str, stats: Tuple[List[str], List[int], Dict[str, List
     ax1.invert_yaxis()
     ax1.legend(loc='upper right', bbox_to_anchor=(1, 1.05), ncols=5)
 
+    ax1.spines["top"].set_visible(False)
+    ax1.spines["right"].set_visible(False)
+
     ax2.barh(bar_titles, unique_training_counts)
 
     max_count = max(unique_training_counts)
     ax2.set_yticks([])
     ax2.set_xlim([0, max_count])
-    ticks = [i for i in range(0, max_count, 10 if max_count >= 20 else 5)]
+    tick_spacing = (10 if max_count >= 20 else 5) if e_id != '2146239081' else 8
+    ticks = [i for i in range(0, max_count, tick_spacing)]
     ax2.set_xticks([*ticks, max_count])
 
     ax2.set_xlabel("# annotations encountered during training")
 
     ax2.invert_yaxis()
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["right"].set_visible(False)
 
     fig.tight_layout()
     plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=300)
 
 
-def plot_timings(e_id: str, stats: Tuple[List[str], List[Tuple[float, Tuple[float, float, float]]]], file_name: str = "timing"):
+def plot_timings(e_id: str, stats: Tuple[List[Tuple[int, int]], List[Tuple[float, Tuple[float, float, float]]]], file_name: str = "timing"):
     bar_titles, timings = stats
 
-    train_x = list(map(lambda x: x.split(', ')[0].removeprefix('('), bar_titles))
-    test_x = list(map(lambda x: x.split(', ')[1].removesuffix(')'), bar_titles))
+    train_x = list(map(lambda x: x[0], bar_titles))
+    test_x = list(map(lambda x: x[1], bar_titles))
 
     train_times = list(map(lambda x: x[0], timings))
     test_times = list(map(lambda x: x[1], timings))
@@ -163,19 +170,58 @@ def plot_timings(e_id: str, stats: Tuple[List[str], List[Tuple[float, Tuple[floa
     px = 1/plt.rcParams['figure.dpi']
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(1280 * px, 1280 * px))
 
-    ax1.scatter(train_x, train_times, c="C1")
+    ax1.scatter(train_x, train_times, c="C1", zorder=10, clip_on=False)
+
+    ax1.set_ylim(bottom=0)
 
     ax1.set_xlabel("Files in train set", loc="right")
     ax1.set_ylabel("Time (s)")
     ax1.set_title("Training times")
+    ax1.spines["top"].set_visible(False)
+    ax1.spines["right"].set_visible(False)
+    ax1.grid()
+    ax1.set_axisbelow(True)
 
-    ax2.errorbar(test_x, test_times_avg, yerr=[test_times_min, test_times_max], fmt='o', capsize=6, ecolor="C0", c="C1")
+    ax2.errorbar(test_x, test_times_avg, yerr=[test_times_min, test_times_max], fmt='o', capsize=6, ecolor="C0", c="C1", zorder=10, clip_on=False)
+
+    ax2.set_ylim(bottom=0)
 
     ax2.set_xlabel("Files in test set", loc="right")
     ax2.set_ylabel("Time (s)")
     ax2.set_title(f"Testing times: (min, avg, max) per click")
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["right"].set_visible(False)
+    ax2.grid()
+    ax2.set_axisbelow(True)
 
     plt.suptitle(f"Simulation timings of exercise {ENGLISH_EXERCISE_NAMES_MAP[e_id]}", fontsize=18)
+
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=300)
+
+
+def plot_top5_evolution_line_graph(results_per_exercise:  Dict[str, Tuple[List[int], List[float]]], file_name="evolution"):
+    train_set_sizes = max(results_per_exercise.values(), key=lambda x: len(x[0]))[0]
+
+    px = 1/plt.rcParams['figure.dpi']
+    fig, ax = plt.subplots(1, 1, figsize=(1280 * px, 640 * px))
+
+    for e_id, (train_sizes, percentages) in results_per_exercise.items():
+        ax.plot(train_sizes, percentages, label=ENGLISH_EXERCISE_NAMES_MAP[e_id])
+
+    ax.set_xticks(range(0, train_set_sizes[-1] + 1, 10))
+    ax.xaxis.set_minor_locator(AutoMinorLocator(2))
+    ax.yaxis.set_minor_locator(AutoMinorLocator(2))
+    ax.set_xlim(left=0, right=train_set_sizes[-1])
+    ax.set_ylim(bottom=0, top=1)
+    ax.grid(which='both')
+
+    ax.set_title("Evolution of top 5 percentage during simulation")
+
+    ax.set_xlabel("Files in train set")
+    ax.set_ylabel("Top 5 percentage")
+
+    ax.legend()
 
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=300)
@@ -200,6 +246,18 @@ def main_simulate(e_id: str, save_stats=False, load_stats=False):
     plot_timings(e_id, (stats[0], stats[4]), file_name=f"{e_id}_timings")
 
 
+def main_line_graph(e_ids: List[str]):
+    results_per_exercise = {}
+    for e_id in e_ids:
+        with open(f'{ROOT_DIR}/output/stats/{e_id}_simulation_3', 'rb') as stats_file:
+            set_sizes, totals, match_counts, _, _ = pickle.load(stats_file)
+            train_sizes = [train_size for train_size, _ in set_sizes]
+            percentages = [(first + top_n) / total for first, top_n, total in zip(match_counts["First"], match_counts["Top 5"], totals)]
+            results_per_exercise[e_id] = ([0] + train_sizes, [0] + percentages)
+
+    plot_top5_evolution_line_graph(results_per_exercise)
+
+
 if __name__ == '__main__':
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
 
@@ -208,3 +266,5 @@ if __name__ == '__main__':
         s = time.time()
         main_simulate(eid, load_stats=False, save_stats=False)
         print(f"Total time: {time.time() - s}")
+
+    main_line_graph(ids)
