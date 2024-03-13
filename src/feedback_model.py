@@ -76,7 +76,7 @@ class FeedbackModel:
                 node_counts[node] += 1
         nodes_to_remove = {n for n, c in node_counts.items() if c > 3}
 
-        for m, (pattern_set, node_set) in results:
+        for a_id, (pattern_set, node_set) in results:
             node_set.difference_update(nodes_to_remove)
             if pattern_set or node_set:
                 patterns[a_id] = (pattern_set, node_set)
