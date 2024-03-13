@@ -10,8 +10,12 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
     """
     Find the subtree corresponding to the code on the specified line
     """
+    context_nodes = ["if_statement", "for_statement", "while_statement", "with_statement", "try_statement", "else_clause", "elif_clause", "except_clause", "finally_clause"]
+
     subtree_on_line = None
-    function_name = None
+    context_root = None
+    context = None
+
     while subtree_on_line is None:
         children = tree["children"]
         parent_tree = tree
@@ -23,8 +27,9 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
         while i < len(children) and (not lines or lines[0] <= line):
             subtree = children[i]
             lines = subtree["lines"]
-            if function_name is None and next_node_is_function_name:
-                function_name = subtree["name"]
+            if context_root is None and next_node_is_function_name:
+                context = []
+                context_root = {"name": subtree["name"], "children": context}
             # If the line is in the current subtree
             if line in lines:
                 if tree is None:
@@ -33,6 +38,10 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
                     # If the first number in lines is the required line, we may have found our subtree
                     if lines[0] == line:
                         subtree_on_line = subtree
+                    elif context is not None and subtree["name"] in context_nodes:
+                        next_context = []
+                        context.append({"name": subtree["name"], "children": next_context})
+                        context = next_context
                 else:
                     # If we already found a next tree to search in a previous iteration, but the line is also in this iteration's lines (can happen if e.g. an expression is split over multiple lines)
                     # Set the subtree_on_line to the parent of the current subtree
@@ -49,10 +58,9 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
                   "children": list(map(lambda t: _keep_only_nodes_of_line(t, line), filter(lambda t: line in t["lines"], subtree_on_line["children"])))
                   }
 
-        if function_name is not None:
-            result = {"name": function_name,
-                      "children": [result]
-                      }
+        if context_root is not None:
+            context.append(result)
+            result = context_root
 
         return result
 
