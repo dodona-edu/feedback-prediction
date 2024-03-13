@@ -26,7 +26,6 @@ class Analyzer(ABC):
         parser.set_language(PYTHON)
         self.parser = parser
 
-        self.not_in_train_test_filter = False  # Whether to filter messages from test files that are not present in any training files
         self.files: List[str] = []
 
         self.train: Dict[str, AnnotatedTree] = {}
@@ -65,17 +64,6 @@ class Analyzer(ABC):
 
         return result
 
-    def _filter_test(self, train: Dict[str, AnnotatedTree], test: Dict[str, AnnotatedTree]) -> Dict[str, AnnotatedTree]:
-        train_messages = set()
-        for (_, items) in train.values():
-            train_messages.update(item[0] for item in items)
-
-        for filename, (tree, messages_lines) in test.items():
-            messages_lines = list(filter(lambda x: x[0] in train_messages, messages_lines))
-            test[filename] = (tree, messages_lines)
-
-        return test
-
     def create_train_test_set(self) -> Tuple[Dict[str, AnnotatedTree], Dict[str, AnnotatedTree]]:
         random.seed(314159)
         files = self.files[:]
@@ -90,9 +78,6 @@ class Analyzer(ABC):
 
         for filename in tqdm(files[len(files) // 2:]):
             test[filename] = self.analyze_file(filename)
-
-        if self.not_in_train_test_filter:
-            test = self._filter_test(train, test)
 
         self.train = train
         self.test = test
