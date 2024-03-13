@@ -13,8 +13,8 @@ from tester import test_all_files
 from constants import COLORS, ROOT_DIR
 
 
-    stats_file_name = f"messages_stats"
 def gather_stats_for_annotations(analyzer: Analyzer, annotations: List[str], load_stats, save_stats) -> Tuple[Counter, List[Counter], Counter, Counter, Dict[int, str]]:
+    stats_file_name = f"messages_stats"
 
     if load_stats:
         with open(f'{ROOT_DIR}/output/stats/{stats_file_name}', 'rb') as stats_file:
