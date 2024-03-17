@@ -7,7 +7,8 @@ COLORS = {
     "LIGHT ORANGE": "#d4a01a",
     "DARK ORANGE": "#d45812",
     "DARK RED": "#7d001b",
-    "GRAY": "#7F848D"
+    "GRAY": "#7F848D",
+    "DARK GRAY": "#3e3f40",
 }
 
 ROOT_DIR = Path(__file__).parent.parent
