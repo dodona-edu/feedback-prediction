@@ -96,18 +96,37 @@ class FeedbackModel:
 
         if thresholds:
             print("Calculating score thresholds")
-            self.calculate_score_thresholds(subtrees)
+            self.calculate_score_thresholds(subtrees, n_procs)
 
         print(f"Total training time: {datetime.datetime.now() - start}")
 
-    def calculate_score_thresholds(self, training_subtrees_per_message: Dict[str, List[HorizontalTree]]) -> None:
-        for m, subtrees in training_subtrees_per_message.items():
-            if m in self.patterns:
-                score_threshold = sum(pqdm([(m, subtree) for subtree in subtrees], self.calculate_matching_score, n_jobs=8, argument_type='args'))
-                self.score_thresholds[m] = 0.75 * score_threshold / len(subtrees)
+    def _calculate_score_threshold(self, a_id: int, subtrees: List[HorizontalTree]) -> Tuple[int, float]:
+        matching_scores = []
+        for subtree in subtrees:
+            matching_scores.append(self.calculate_matching_score(a_id, subtree))
+        score_threshold = 0.95 * (min(matching_scores) + max(matching_scores)) / 2
 
-    def update_score_threshold(self, message: str, score: float):
-        self.score_thresholds[message] = self.score_thresholds[message] * 0.8 + score * 0.2 * 0.75
+        return a_id, score_threshold
+
+    def calculate_score_thresholds(self, training_subtrees_per_annotation: Dict[int, List[HorizontalTree]], n_procs: int) -> None:
+        annotation_subtrees = []
+        for a_id, subtrees in training_subtrees_per_annotation.items():
+            if a_id in self.patterns:
+                annotation_subtrees.append((a_id, subtrees))
+
+        score_thresholds = pqdm(annotation_subtrees, self._calculate_score_threshold, n_jobs=n_procs, argument_type='args')
+
+        for a_id, score_threshold in score_thresholds:
+            if a_id in self.score_thresholds:
+                self.score_thresholds[a_id] = 0.2 * score_threshold + 0.8 * self.score_thresholds[a_id]
+            else:
+                self.score_thresholds[a_id] = score_threshold
+
+    def update_score_threshold(self, annotation_id: int, score: float) -> None:
+        if score > 0.2 * self.score_thresholds[annotation_id]:
+            self.score_thresholds[annotation_id] = score * 0.95
+        else:
+            self.score_thresholds[annotation_id] = self.score_thresholds[annotation_id] * 0.8 + score * 0.2 * 0.95
 
     def calculate_matching_score(self, annotation_id: int, subtree: HorizontalTree) -> float:
         pattern_set = self.patterns[annotation_id][0]

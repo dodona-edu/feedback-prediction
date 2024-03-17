@@ -32,6 +32,7 @@ class Analyzer(ABC):
         self.test: Dict[str, AnnotatedTree] = {}
 
         self.id_annotation_map: Dict[int, str] = {}
+        self.annotations_per_submission_per_line: Dict[str, Dict[int, Dict[int, str]]] = {}
 
     def map_tree(self, node: Node) -> LineTree:
         children = [self.map_tree(child) for child in node.children if child.type != "comment"]
@@ -136,6 +137,7 @@ class FeedbackAnalyzer(Analyzer):
             for row in rows:
                 line = row["line_nr"]
                 if line != 'NULL':
+                    line = int(line)
                     submission_id = row["submission_id"]
                     annotation = row["annotation_text"]
                     saved_id = int(row["saved_annotation_id"])
@@ -143,7 +145,13 @@ class FeedbackAnalyzer(Analyzer):
 
                     if saved_id not in self.id_annotation_map:
                         self.id_annotation_map[saved_id] = annotation
-                    self.submission_annotations_map[submission_id].append((saved_id, int(line), creation_time))
+                    self.submission_annotations_map[submission_id].append((saved_id, line, creation_time))
+
+                    if submission_id not in self.annotations_per_submission_per_line:
+                        self.annotations_per_submission_per_line[submission_id] = {}
+                    if line not in self.annotations_per_submission_per_line[submission_id]:
+                        self.annotations_per_submission_per_line[submission_id][line] = {}
+                    self.annotations_per_submission_per_line[submission_id][line][saved_id] = annotation
 
     def get_annotation_instances(self, file: str) -> List[AnnotationInstance]:
         submission_id = file.split('/')[-1].split('.')[0]
