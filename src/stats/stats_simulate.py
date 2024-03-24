@@ -158,8 +158,8 @@ def plot_simulation(e_id: str, stats: Tuple[List[Tuple[int, int]], List[int], Di
 def plot_timings(e_id: str, stats: Tuple[List[Tuple[int, int]], List[Tuple[float, Tuple[float, float, float]]]], file_name: str = "timing"):
     bar_titles, timings = stats
 
-    train_x = list(map(lambda x: x[0], bar_titles))
-    test_x = list(map(lambda x: x[1], bar_titles))
+    train_x = list(map(lambda x: str(x[0]), bar_titles))
+    test_x = list(map(lambda x: str(x[1]), bar_titles))
 
     train_times = list(map(lambda x: x[0], timings))
     test_times = list(map(lambda x: x[1], timings))
