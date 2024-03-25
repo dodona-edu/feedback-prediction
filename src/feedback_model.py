@@ -52,9 +52,9 @@ class FeedbackModel:
         if len(subtrees) >= 3:
             annotation_patterns = mine_patterns(subtrees)
 
-            for subtree in subtrees:
-                identifying_nodes.update(subtree)
-            identifying_nodes.remove(-1)
+        for subtree in subtrees:
+            identifying_nodes.update(subtree)
+        identifying_nodes.remove(-1)
 
         return annotation_id, (annotation_patterns, identifying_nodes)
 
