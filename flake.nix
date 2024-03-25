@@ -87,6 +87,8 @@
                   };
                 })
                 ps.setuptools
+                ps.numpy
+                ps.matplotlib
                 ps.pydot
                 ps.tqdm
                 pqdm
