@@ -1,5 +1,46 @@
+from typing import List
+
 from custom_types import HorizontalTree
 from util import sequence_fully_contains_other_sequence
+
+
+def find_in_subtree(current_subtree: HorizontalTree, pattern: HorizontalTree, pattern_length: int, history: List,
+                    p_i: int, depth: int, depth_stack: List[int]) -> bool:
+    local_history = []
+    for i, item in enumerate(current_subtree):
+        # We go up in the tree
+        if item == -1:
+            # If the depth of the last matched node is equal to what the depth will be after this iteration
+            if depth_stack and depth - 1 == depth_stack[-1]:
+                # We go up past the last node
+                depth_stack.pop()
+                # If in the pattern, we are not supposed to go up
+                if pattern[p_i] != -1:
+                    # Reset the pattern index
+                    p_i = 0
+                    # If we are past the first matched node, we can limit our future backtracking in local_history to a new subtree
+                    if not depth_stack:
+                        history.append((local_history, current_subtree[:i + 1]))
+                        local_history = []
+                    depth_stack = []
+                else:
+                    p_i += 1
+            depth -= 1
+        else:
+            if pattern[p_i] == item:
+                local_history.append((i + 1, depth + 1, depth_stack[:], p_i))
+                depth_stack.append(depth)
+                p_i += 1
+
+            depth += 1
+
+        if p_i == pattern_length:
+            return True
+
+    if local_history:
+        history.append((local_history, current_subtree))
+
+    return False
 
 
 def subtree_matches(subtree: HorizontalTree, pattern: HorizontalTree) -> bool:
@@ -67,60 +108,16 @@ def subtree_matches(subtree: HorizontalTree, pattern: HorizontalTree) -> bool:
         return False
 
     pattern_length = len(pattern)
-
-    start = 0
-    p_i = 0
-    depth = 0
-    depth_stack = []
     history = []
 
-    def find_in_subtree(current_subtree) -> bool:
-        nonlocal start, p_i, depth, depth_stack
-
-        local_history = []
-        for i, item in enumerate(current_subtree):
-            # We go up in the tree
-            if item == -1:
-                # If the depth of the last matched node is equal to what the depth will be after this iteration
-                if depth_stack and depth - 1 == depth_stack[-1]:
-                    # We go up past the last node
-                    depth_stack.pop()
-                    # If in the pattern, we are not supposed to go up
-                    if pattern[p_i] != -1:
-                        # Reset the pattern index
-                        p_i = 0
-                        # If we are past the first matched node, we can limit our future backtracking in local_history to a new subtree
-                        if not depth_stack:
-                            history.append((local_history, current_subtree[:i + 1]))
-                            local_history = []
-                    else:
-                        p_i += 1
-                depth -= 1
-            else:
-                if pattern[p_i] == item:
-                    local_history.append((start + i + 1, depth + 1, depth_stack[:], p_i))
-                    depth_stack.append(depth)
-                    p_i += 1
-
-                depth += 1
-
-            if p_i == pattern_length:
-                return True
-
-        if local_history:
-            history.append((local_history, current_subtree))
-
-        return False
-
-    result = find_in_subtree(subtree)
+    result = find_in_subtree(subtree, pattern, pattern_length, history, 0, 0, [])
     while not result and history:
         to_explore, to_explore_subtree = history.pop()
         while not result and to_explore:
             start, depth, depth_stack, p_i = to_explore.pop()
             new_subtree = to_explore_subtree[start:]
-            start = 0
             # Subtree needs to contain all items from pattern
             if pattern_length - p_i <= len(new_subtree) and sequence_fully_contains_other_sequence(new_subtree, pattern[p_i:]):
-                result = find_in_subtree(new_subtree)
+                result = find_in_subtree(new_subtree, pattern, pattern_length, history, p_i, depth, depth_stack)
 
     return result
