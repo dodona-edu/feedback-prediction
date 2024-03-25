@@ -103,7 +103,7 @@ def plot_simulation(e_id: str, stats: Tuple[List[Tuple[int, int]], List[int], Di
     bar_titles, totals, match_counts, unique_training_counts, _ = stats
     bar_titles = [str(bar_title) for bar_title in bar_titles]
 
-    px = 1/plt.rcParams['figure.dpi']
+    px = 1 / plt.rcParams['figure.dpi']
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(1280 * px, 960 * px), gridspec_kw={'width_ratios': [3, 1]})
 
     colors = [
@@ -167,7 +167,7 @@ def plot_timings(e_id: str, stats: Tuple[List[Tuple[int, int]], List[Tuple[float
     test_times_avg = list(map(lambda x: x[1], test_times))
     test_times_max = list(map(lambda x: x[2], test_times))
 
-    px = 1/plt.rcParams['figure.dpi']
+    px = 1 / plt.rcParams['figure.dpi']
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(1280 * px, 1280 * px))
 
     ax1.scatter(train_x, train_times, c="C1", zorder=10, clip_on=False)
@@ -200,10 +200,10 @@ def plot_timings(e_id: str, stats: Tuple[List[Tuple[int, int]], List[Tuple[float
     plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=300)
 
 
-def plot_top5_evolution_line_graph(results_per_exercise:  Dict[str, Tuple[List[int], List[float]]], file_name="evolution"):
+def plot_top5_evolution_line_graph(results_per_exercise: Dict[str, Tuple[List[int], List[float]]], file_name="evolution"):
     train_set_sizes = max(results_per_exercise.values(), key=lambda x: len(x[0]))[0]
 
-    px = 1/plt.rcParams['figure.dpi']
+    px = 1 / plt.rcParams['figure.dpi']
     fig, ax = plt.subplots(1, 1, figsize=(1280 * px, 640 * px))
 
     for e_id, (train_sizes, percentages) in results_per_exercise.items():
@@ -245,15 +245,16 @@ def main_simulate(e_id: str, save_stats=False, load_stats=False):
     plot_simulation(e_id, stats, file_name=f"{e_id}")
     plot_timings(e_id, (stats[0], stats[4]), file_name=f"{e_id}_timings")
 
+    return stats
 
-def main_line_graph(e_ids: List[str]):
+
+def main_line_graph(e_ids: List[str], results):
     results_per_exercise = {}
-    for e_id in e_ids:
-        with open(f'{ROOT_DIR}/output/stats/{e_id}_simulation_3', 'rb') as stats_file:
-            set_sizes, totals, match_counts, _, _ = pickle.load(stats_file)
-            train_sizes = [train_size for train_size, _ in set_sizes]
-            percentages = [(first + top_n) / total for first, top_n, total in zip(match_counts["First"], match_counts["Top 5"], totals)]
-            results_per_exercise[e_id] = ([0] + train_sizes, [0] + percentages)
+    for e_id, result in zip(e_ids, results):
+        set_sizes, totals, match_counts, _, _ = result
+        train_sizes = [train_size for train_size, _ in set_sizes]
+        percentages = [(first + top_n) / total for first, top_n, total in zip(match_counts["First"], match_counts["Top 5"], totals)]
+        results_per_exercise[e_id] = ([0] + train_sizes, [0] + percentages)
 
     plot_top5_evolution_line_graph(results_per_exercise)
 
@@ -261,10 +262,12 @@ def main_line_graph(e_ids: List[str]):
 if __name__ == '__main__':
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
 
+    all_results = []
     for eid in ids:
         print(f"Exercise {eid}")
         s = time.time()
-        main_simulate(eid, load_stats=False, save_stats=False)
+        res = main_simulate(eid, load_stats=False, save_stats=False)
+        all_results.append(res)
         print(f"Total time: {time.time() - s}")
 
-    main_line_graph(ids)
+    main_line_graph(ids, all_results)
