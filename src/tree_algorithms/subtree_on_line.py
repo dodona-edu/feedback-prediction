@@ -1,7 +1,7 @@
 from custom_types import Tree, LineTree
 
 
-def _keep_only_nodes_of_line(tree: LineTree, line: int):
+def _keep_only_nodes_of_line(tree: LineTree, line: int) -> Tree:
     return {"name": tree["name"],
             "children": list(map(lambda t: _keep_only_nodes_of_line(t, line), filter(lambda t: line in t["lines"], tree["children"])))}
 
@@ -15,6 +15,7 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
     subtree_on_line = None
     context_root = None
     context = None
+    next_child_is_function_name = False
 
     while subtree_on_line is None:
         children = tree["children"]
@@ -22,7 +23,7 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
         i = 0
         tree = None
         lines = []
-        next_node_is_function_name = False
+        next_node_is_function_name = next_child_is_function_name
         # Go through all child nodes, until we are sure we have passed the required line
         while i < len(children) and (not lines or lines[0] <= line):
             subtree = children[i]
@@ -32,6 +33,7 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
                 context_root = {"name": subtree["name"], "children": context}
             # If the line is in the current subtree
             if line in lines:
+                next_child_is_function_name = subtree["name"] == "function_definition"
                 if tree is None:
                     # Set up the next tree to search in
                     tree = subtree
@@ -47,21 +49,16 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
                     # Set the subtree_on_line to the parent of the current subtree
                     subtree_on_line = parent_tree
 
-            next_node_is_function_name = subtree["name"] == "def"
             i += 1
 
         if tree is None:
             return None
 
-    if subtree_on_line is not None:
-        result = {"name": subtree_on_line["name"],
-                  "children": list(map(lambda t: _keep_only_nodes_of_line(t, line), filter(lambda t: line in t["lines"], subtree_on_line["children"])))
-                  }
+    result = _keep_only_nodes_of_line(subtree_on_line, line)
 
-        if context_root is not None:
-            context.append(result)
-            result = context_root
+    if context_root is not None:
+        context.append(result)
+        result = context_root
 
-        return result
+    return result
 
-    return None
