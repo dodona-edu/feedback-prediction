@@ -5,8 +5,9 @@ from util import sequence_fully_contains_other_sequence
 
 
 def find_in_subtree(current_subtree: HorizontalTree, pattern: HorizontalTree, pattern_length: int, history: List,
-                    p_i: int, depth: int, match_stack: List[Tuple[int, int, int]]) -> bool:
+                    p_i: int, depth: int) -> bool:
     local_history = []
+    match_stack = []
     for i, item in enumerate(current_subtree):
         # We go up in the tree
         if item == -1:
@@ -27,7 +28,7 @@ def find_in_subtree(current_subtree: HorizontalTree, pattern: HorizontalTree, pa
             depth -= 1
         else:
             if pattern[p_i] == item:
-                local_history.append((i + 1, depth + 1, match_stack[:], p_i))
+                local_history.append((i + 1, depth + 1, p_i))
                 match_stack.append((depth, p_i, len(local_history) - 1))
                 p_i += 1
 
@@ -111,14 +112,14 @@ def subtree_matches(subtree: HorizontalTree, pattern: HorizontalTree) -> bool:
     pattern_length = len(pattern)
     history = []
 
-    result = find_in_subtree(subtree, pattern, pattern_length, history, 0, 0, [])
+    result = find_in_subtree(subtree, pattern, pattern_length, history, 0, 0)
     while not result and history:
         to_explore, to_explore_subtree = history.pop()
         while not result and to_explore:
-            start, depth, match_stack, p_i = to_explore.pop()
+            start, depth, p_i = to_explore.pop()
             new_subtree = to_explore_subtree[start:]
             # The new_subtree needs to be at least as long as the remaining pattern and contain all items from the remaining pattern
             if pattern_length - p_i <= len(new_subtree) and sequence_fully_contains_other_sequence(new_subtree, pattern[p_i:]):
-                result = find_in_subtree(new_subtree, pattern, pattern_length, history, p_i, depth, match_stack)
+                result = find_in_subtree(new_subtree, pattern, pattern_length, history, p_i, depth)
 
     return result
