@@ -35,15 +35,17 @@ class Analyzer(ABC):
         self.annotations_per_submission_per_line: Dict[str, Dict[int, Dict[int, str]]] = {}
 
     def map_tree(self, node: Node) -> LineTree:
-        children = [self.map_tree(child) for child in node.named_children if child.type != "comment"]
+        children = [self.map_tree(child) for child in node.named_children]
+        lines = sorted(set(range(node.start_point[0], node.end_point[0] + 1)))
         if node.type in ["binary_operator", "boolean_operator", "comparison_operator", "augmented_assignment"]:
             name = node.children[1].type
         elif node.type == "unary_operator":
             name = node.children[0].type
+        elif node.type in ["identifier", "string", "integer"]:
+            name = node.text.decode("utf-8")
         else:
-            name = node.text.decode("utf-8") if node.type in ["identifier", "string", "integer"] else node.type
-        lines = set(range(node.start_point[0], node.end_point[0] + 1))
-        return {"name": name, "lines": sorted(lines), "children": children}
+            name = node.type
+        return {"name": name, "lines": lines, "children": children}
 
     @abstractmethod
     def get_annotation_instances(self, file: str) -> List[AnnotationInstance]:
