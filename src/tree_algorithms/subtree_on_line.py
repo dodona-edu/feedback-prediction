@@ -14,7 +14,7 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
 
     subtree_on_line = None
     context_root = None
-    context = None
+    context = []
     next_child_is_function_name = False
 
     while subtree_on_line is None:
@@ -28,9 +28,14 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
         while i < len(children) and (not lines or lines[0] <= line):
             subtree = children[i]
             lines = subtree["lines"]
-            if context_root is None and next_node_is_function_name:
-                context = []
-                context_root = {"name": subtree["name"], "children": context}
+            if next_node_is_function_name:
+                if context_root is None:
+                    context_root = {"name": subtree["name"], "children": context}
+                else:
+                    next_context = []
+                    context.append({"name": subtree["name"], "children": next_context})
+                    context = next_context
+                next_node_is_function_name = False
             # If the line is in the current subtree
             if line in lines:
                 next_child_is_function_name = subtree["name"] == "function_definition"
@@ -40,7 +45,7 @@ def find_subtree_on_line(tree: LineTree, line: int) -> Tree | None:
                     # If the first number in lines is the required line, we may have found our subtree
                     if lines[0] == line:
                         subtree_on_line = subtree
-                    elif context is not None and subtree["name"] in context_nodes:
+                    elif context_root is not None and subtree["name"] in context_nodes:
                         next_context = []
                         context.append({"name": subtree["name"], "children": next_context})
                         context = next_context
