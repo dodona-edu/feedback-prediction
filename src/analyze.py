@@ -43,6 +43,8 @@ class Analyzer(ABC):
             name = node.children[0].type
         elif node.type in ["identifier", "string", "integer"]:
             name = node.text.decode("utf-8")
+            if node.type == "string":
+                name = f"'{name[1:-1]}'"
         else:
             name = node.type
         return {"name": name, "lines": lines, "children": children}
