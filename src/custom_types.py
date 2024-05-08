@@ -15,8 +15,8 @@ class Tree(TypedDict):
 # A horizontal version of a tree, where a string means going down one level and a -1 means going up
 type HorizontalTree = Sequence[str | int]
 
-# A combination of patterns and 'identifying' nodes. Identifying means that these nodes might be important/useful and related to the annotation
-type PatternCollection = Tuple[Set[HorizontalTree], Set[str]]
+# A combination of patterns, single node patterns and 'identifying' nodes. Identifying means that these nodes might be important/useful and related to the annotation
+type PatternCollection = Tuple[Set[HorizontalTree], Set[str], Set[str]]
 
 # A combination of a feedback comment id and a line number on which the feedback was given
 type AnnotationInstance = Tuple[int, int]

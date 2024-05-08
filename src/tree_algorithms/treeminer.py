@@ -10,19 +10,21 @@ from custom_types import HorizontalTree, ScopeElement, Scope
 from util import to_string_encoding
 
 
-def mine_patterns(subtrees: List[HorizontalTree]) -> Set[HorizontalTree]:
-    miner = Treeminerd(subtrees, support=0.8)
+def mine_patterns(subtrees: List[HorizontalTree], support=0.8) -> Tuple[Set[HorizontalTree], Set[str]]:
+    miner = Treeminerd(subtrees, support=support)
+    # TODO always early stopping
     if miner.early_stopping:
         p = multiprocessing.Process(target=miner.get_patterns)
         p.start()
         p.join(30)
         if p.is_alive():
+            print("TREEMINER: TIMEOUT")
             p.terminate()
         patterns = set(miner.result)
     else:
         patterns = miner.get_patterns()
 
-    return patterns
+    return patterns, set(miner.f_1)
 
 
 class MinerAlgorithm:

@@ -44,19 +44,19 @@ class FeedbackModel:
     def _find_patterns(annotation_id: int, subtrees: List[HorizontalTree]) -> Tuple[int, PatternCollection]:
         """
         Find the patterns present in the given subtrees.
-        Also determines the identifying nodes of the subtrees.
+        Also collect all nodes of the subtrees in a set.
         """
         annotation_patterns = set()
-        identifying_nodes = set()
+        frequent_nodes = set()
+        node_set = set()
 
         if len(subtrees) >= 3:
-            annotation_patterns = mine_patterns(subtrees)
+            annotation_patterns, frequent_nodes = mine_patterns(subtrees)
 
         for subtree in subtrees:
-            identifying_nodes.update(subtree)
-        identifying_nodes.remove(-1)
+            node_set.update(subtree)
 
-        return annotation_id, (annotation_patterns, identifying_nodes)
+        return annotation_id, (annotation_patterns, frequent_nodes, node_set)
 
     def train(self, training: Dict[str, AnnotatedTree], n_procs=8, thresholds=False) -> None:
         """
@@ -71,19 +71,19 @@ class FeedbackModel:
         results: List[Tuple[int, PatternCollection]] = pqdm(list(subtrees.items()), self._find_patterns, n_jobs=n_procs, argument_type='args')
 
         node_counts = defaultdict(int)
-        for _, (_, nodes) in results:
+        for _, (_, _, nodes) in results:
             for node in nodes:
                 node_counts[node] += 1
         nodes_to_remove = {n for n, c in node_counts.items() if c > 3}
 
-        for a_id, (pattern_set, node_set) in results:
-            node_set.difference_update(nodes_to_remove)
-            if pattern_set or node_set:
-                patterns[a_id] = (pattern_set, node_set)
+        for a_id, (pattern_set, frequent_nodes, node_set) in results:
+            identifying_nodes = node_set.difference(nodes_to_remove)
+            if pattern_set or identifying_nodes:
+                patterns[a_id] = (pattern_set, frequent_nodes, identifying_nodes)
 
         print("Calculating pattern weights")
         pattern_weights = defaultdict(float)
-        for annotation_patterns, _ in patterns.values():
+        for annotation_patterns, _, _ in patterns.values():
             for pattern in annotation_patterns:
                 pattern_weights[pattern] += 1
 
@@ -128,14 +128,14 @@ class FeedbackModel:
         else:
             self.score_thresholds[annotation_id] = self.score_thresholds[annotation_id] * 0.8 + score * 0.2 * 0.95
 
-    def calculate_matching_score(self, annotation_id: int, subtree: HorizontalTree) -> float:
+    def calculate_matching_score(self, annotation_id: int, subtree: HorizontalTree, use_negatives=False) -> float:
         pattern_set = self.patterns[annotation_id][0]
         matches = list(filter(lambda pattern: subtree_matches(subtree, pattern), pattern_set))
         matches_score = 0
         if pattern_set:
             matches_score = sum(self.pattern_weights[match] for match in matches) / len(pattern_set)
 
-        node_set = self.patterns[annotation_id][1]
+        node_set = self.patterns[annotation_id][2]
         nodes = set(subtree).intersection(node_set)
         nodes_score = 0
         if node_set:
@@ -143,11 +143,15 @@ class FeedbackModel:
 
         return matches_score + nodes_score
 
-    def calculate_matching_scores(self, subtree: Tree, identifying_only=False) -> Dict[int, float]:
+    def calculate_matching_scores(self, subtree: Tree, use_negatives=False) -> Dict[int, float]:
         horizontal_subtree = list(to_string_encoding(subtree))
-        if identifying_only:
-            nodes = set(horizontal_subtree)
-            matching_scores = {message: self.calculate_matching_score(message, horizontal_subtree) for message, (_, identifying_nodes) in self.patterns.items() if nodes.intersection(identifying_nodes)}
-        else:
-            matching_scores = {message: self.calculate_matching_score(message, horizontal_subtree) for message in self.patterns.keys()}
+        nodes = set(horizontal_subtree)
+        nodes.discard(-1)
+
+        matching_scores = {}
+        for a_id, (_, frequent_nodes, identifying_nodes) in self.patterns.items() :
+            if nodes.intersection(identifying_nodes) or nodes.intersection(frequent_nodes):
+                matching_scores[a_id] = self.calculate_matching_score(a_id, horizontal_subtree)
+            else:
+                matching_scores[a_id] = 0
         return matching_scores
