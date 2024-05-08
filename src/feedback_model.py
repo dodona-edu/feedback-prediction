@@ -31,7 +31,7 @@ class FeedbackModel:
         with open(f'{self.MODEL_DIR}/{model_file}', 'wb') as patterns_file:
             pickle.dump((self.patterns, self.pattern_weights, self.score_thresholds), patterns_file, pickle.HIGHEST_PROTOCOL)
 
-    def _annotation_subtrees(self, dataset: Dict[str, AnnotatedTree]) -> Dict[int, List[HorizontalTree]]:
+    def get_annotation_subtrees(self, dataset: Dict[str, AnnotatedTree]) -> Dict[int, List[HorizontalTree]]:
         result = defaultdict(list)
         for tree, annotation_instances in dataset.values():
             for a_id, line in annotation_instances:
@@ -64,11 +64,12 @@ class FeedbackModel:
         """
         start = datetime.datetime.now()
 
-        subtrees = self._annotation_subtrees(training)
+        annotation_subtrees = self.get_annotation_subtrees(training)
+
         print("Determining patterns for training data")
         patterns = {}
 
-        results: List[Tuple[int, PatternCollection]] = pqdm(list(subtrees.items()), self._find_patterns, n_jobs=n_procs, argument_type='args')
+        results: List[Tuple[int, PatternCollection]] = pqdm(list(annotation_subtrees.items()), self._find_patterns, n_jobs=n_procs, argument_type='args', exception_behaviour='immediate')
 
         node_counts = defaultdict(int)
         for _, (_, _, nodes) in results:
@@ -96,7 +97,7 @@ class FeedbackModel:
 
         if thresholds:
             print("Calculating score thresholds")
-            self.calculate_score_thresholds(subtrees, n_procs)
+            self.calculate_score_thresholds(annotation_subtrees, n_procs)
 
         print(f"Total training time: {datetime.datetime.now() - start}")
 
