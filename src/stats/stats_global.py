@@ -30,11 +30,11 @@ def gather_data(analyzer: Analyzer, eid: str):
     model = FeedbackModel()
 
     start_train = time.time()
-    model.train(train)
+    model.train(train, n_procs=N_PROCS)
     end_train = time.time()
 
     start_test = time.time()
-    total_per_annotation, first_n_per_annotation, _, times = test_all_files(test, model, n=5, n_procs=8)
+    total_per_annotation, first_n_per_annotation, _, times = test_all_files(test, model, n=5, n_procs=N_PROCS)
     end_test = time.time()
 
     timings[eid] = (end_train - start_train, end_test - start_test, (min(times), sum(times) / len(times), max(times)))
