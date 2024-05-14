@@ -140,7 +140,7 @@ class FeedbackModel:
         nodes = set(subtree).intersection(node_set)
         nodes_score = 0
         if node_set:
-            nodes_score = len(nodes) / len(node_set)
+            nodes_score = len(nodes)
 
         return matches_score + nodes_score
 
