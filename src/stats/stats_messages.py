@@ -111,7 +111,7 @@ def plot_accuracies_for_annotations(analyzer: Analyzer, annotations: List[str], 
     plt.legend(loc='upper right', bbox_to_anchor=(1, 1.1), ncols=6)
 
     fig.tight_layout()
-    plt.savefig(f'{ROOT_DIR}/output/plots/messages/messages_plot.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'{ROOT_DIR}/output/plots/messages/messages_plot.png', bbox_inches='tight', dpi=150)
 
 
 if __name__ == '__main__':

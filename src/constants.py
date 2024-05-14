@@ -20,6 +20,7 @@ DUTCH_EXERCISE_NAMES_MAP = {
     "1875043169": "Cocktailbar",  # https://dodona.be/nl/courses/1659/series/18385/activities/1875043169/
     "2046492002": "Antropomorfe emoji",  # https://dodona.be/nl/courses/1659/series/18385/activities/2046492002/
     "2146239081": "Kluizenaar",  # https://dodona.be/nl/courses/1659/series/18385/activities/2146239081/
+    "Combined": "Gecombineerd"
 }
 
 ENGLISH_EXERCISE_NAMES_MAP = {
@@ -29,4 +30,5 @@ ENGLISH_EXERCISE_NAMES_MAP = {
     "1875043169": "Cocktail bar",  # https://dodona.be/nl/courses/1659/series/18385/activities/1875043169/
     "2046492002": "Anthropomorphic emoji",  # https://dodona.be/nl/courses/1659/series/18385/activities/2046492002/
     "2146239081": "Hermit",  # https://dodona.be/nl/courses/1659/series/18385/activities/2146239081/
+    "Combined": "Combined"
 }

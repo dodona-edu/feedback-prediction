@@ -1,3 +1,4 @@
+import multiprocessing
 import time
 import pickle
 from glob import glob
@@ -11,7 +12,7 @@ from analyze import FeedbackAnalyzer
 from custom_types import AnnotatedTree
 from feedback_model import FeedbackModel
 from tester import test_all_files
-from constants import ROOT_DIR, COLORS, ENGLISH_EXERCISE_NAMES_MAP
+from constants import ROOT_DIR, COLORS, ENGLISH_EXERCISE_NAMES_MAP, DUTCH_EXERCISE_NAMES_MAP
 
 
 def get_annotation_ids(dataset: Dict[str, AnnotatedTree]) -> Set[int]:
@@ -124,7 +125,7 @@ def plot_simulation(e_id: str, stats: Tuple[List[Tuple[int, int]], List[int], Di
         labels = [c if c > 0 else "" for c in counts]
         ax1.bar_label(bars, labels, label_type='center', color='white')
 
-    ax1.set_title(f"Simulation of exercise {ENGLISH_EXERCISE_NAMES_MAP[e_id]}", pad=50)
+    ax1.set_title(f"Simulation of exercise {NAMES_MAP[e_id]}", pad=50)
     ax1.set_xlim([0, 1])
 
     ax1.set_xlabel("Percentage of annotation instances")
@@ -152,7 +153,7 @@ def plot_simulation(e_id: str, stats: Tuple[List[Tuple[int, int]], List[int], Di
     ax2.spines["right"].set_visible(False)
 
     fig.tight_layout()
-    plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=150)
 
 
 def plot_timings(e_id: str, stats: Tuple[List[Tuple[int, int]], List[Tuple[float, Tuple[float, float, float]]]], file_name: str = "timing"):
@@ -194,10 +195,10 @@ def plot_timings(e_id: str, stats: Tuple[List[Tuple[int, int]], List[Tuple[float
     ax2.grid()
     ax2.set_axisbelow(True)
 
-    plt.suptitle(f"Simulation timings of exercise {ENGLISH_EXERCISE_NAMES_MAP[e_id]}", fontsize=18)
+    plt.suptitle(f"Simulation timings of exercise {NAMES_MAP[e_id]}", fontsize=18)
 
     fig.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=150)
 
 
 def plot_top5_evolution_line_graph(results_per_exercise: Dict[str, Tuple[List[int], List[float]]], file_name="evolution"):
@@ -207,7 +208,7 @@ def plot_top5_evolution_line_graph(results_per_exercise: Dict[str, Tuple[List[in
     fig, ax = plt.subplots(1, 1, figsize=(1280 * px, 640 * px))
 
     for e_id, (train_sizes, percentages) in results_per_exercise.items():
-        ax.plot(train_sizes, percentages, label=ENGLISH_EXERCISE_NAMES_MAP[e_id])
+        ax.plot(train_sizes, percentages, label=NAMES_MAP[e_id])
 
     ax.set_xticks(range(0, train_set_sizes[-1] + 1, 10))
     ax.xaxis.set_minor_locator(AutoMinorLocator(2))
@@ -224,7 +225,7 @@ def plot_top5_evolution_line_graph(results_per_exercise: Dict[str, Tuple[List[in
     ax.legend()
 
     fig.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'{ROOT_DIR}/output/plots/simulation/{file_name}.png', bbox_inches='tight', dpi=150)
 
 
 def main_simulate(e_id: str, save_stats=False, load_stats=False):
@@ -242,8 +243,8 @@ def main_simulate(e_id: str, save_stats=False, load_stats=False):
             with open(stats_file, 'wb') as stats_file:
                 pickle.dump(stats, stats_file, pickle.HIGHEST_PROTOCOL)
 
-    plot_simulation(e_id, stats, file_name=f"{e_id}")
-    plot_timings(e_id, (stats[0], stats[4]), file_name=f"{e_id}_timings")
+    plot_simulation(e_id, stats, file_name=f"{prefix}_{e_id}")
+    plot_timings(e_id, (stats[0], stats[4]), file_name=f"{prefix}_{e_id}_timings")
 
     return stats
 
@@ -256,10 +257,15 @@ def main_line_graph(e_ids: List[str], results):
         percentages = [(first + top_n) / total for first, top_n, total in zip(match_counts["First"], match_counts["Top 5"], totals)]
         results_per_exercise[e_id] = ([0] + train_sizes, [0] + percentages)
 
-    plot_top5_evolution_line_graph(results_per_exercise)
+    plot_top5_evolution_line_graph(results_per_exercise, file_name=f"{prefix}_line")
 
 
 if __name__ == '__main__':
+    multiprocessing.set_start_method('forkserver')
+
+    NAMES_MAP = DUTCH_EXERCISE_NAMES_MAP
+
+    prefix = "simulation"
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
 
     all_results = []

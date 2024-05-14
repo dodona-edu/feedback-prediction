@@ -1,3 +1,4 @@
+import multiprocessing
 import pickle
 import time
 from glob import glob
@@ -9,7 +10,7 @@ from matplotlib import pyplot as plt
 from analyze import PylintAnalyzer, FeedbackAnalyzer, Analyzer
 from feedback_model import FeedbackModel
 from tester import test_all_files
-from constants import COLORS, ROOT_DIR, ENGLISH_EXERCISE_NAMES_MAP
+from constants import COLORS, ROOT_DIR, ENGLISH_EXERCISE_NAMES_MAP, DUTCH_EXERCISE_NAMES_MAP
 
 labels_list = ['Rank 1', 'Rank 2', 'Rank 3', 'Rank 4', 'Rank 5', 'Rank > 5']
 
@@ -65,7 +66,7 @@ def plot_global_accuracies_stacked_bar(results: Dict[str, Tuple[List[float], int
         ax.bar_label(bars, labels, label_type='center', color='white')
 
     for bar, eid in zip(ax.containers[0], eids):
-        exercise_name = ENGLISH_EXERCISE_NAMES_MAP[eid] if eid in ENGLISH_EXERCISE_NAMES_MAP else eid
+        exercise_name = NAMES_MAP[eid] if eid in NAMES_MAP else eid
         plt.text(-0.02, bar.get_y() + bar.get_height() / 2, exercise_name, ha="right", va="center")
         plt.text(1.02, bar.get_y() + bar.get_height() / 2, f"{results[eid][1]};{results[eid][2]}", ha="left", va="center")
 
@@ -78,24 +79,24 @@ def plot_global_accuracies_stacked_bar(results: Dict[str, Tuple[List[float], int
 
     fig.tight_layout()
 
-    plt.savefig(f'{ROOT_DIR}/output/plots/global/{file_name}.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'{ROOT_DIR}/output/plots/global/{file_name}.png', bbox_inches='tight', dpi=150)
 
 
 def print_timings():
     print()
     print("Timings: ")
     for exercise_id, (train_time, test_time, (min_click, avg_click, max_click)) in timings.items():
-        print(f"Exercise {ENGLISH_EXERCISE_NAMES_MAP[exercise_id] if exercise_id in ENGLISH_EXERCISE_NAMES_MAP else exercise_id} ({exercise_id}):")
-        print(f"training time: {train_time}")
-        print(f"testing time: {test_time}")
-        print(f"min time/click: {min_click}")
-        print(f"avg time/click: {avg_click}")
-        print(f"max time/click: {max_click}")
+        print(f"Exercise {NAMES_MAP[exercise_id] if exercise_id in NAMES_MAP else exercise_id} ({exercise_id}):")
+        print(f"training time:  {train_time:.5f}")
+        print(f"testing time:   {test_time:.5f}")
+        print(f"min time/click: {min_click:.5f}")
+        print(f"avg time/click: {avg_click:.5f}")
+        print(f"max time/click: {max_click:.5f}")
         print()
 
 
 def main_stacked_bars(exercise_ids: List[str], is_pylint: bool = False, load_data: bool = False, save_data: bool = False):
-    stats_file = f"stacked_bars_global{'_pylint' if is_pylint else ''}"
+    stats_file = f"{STATS_FILE}{'_pylint' if is_pylint else ''}"
     analyzer = PylintAnalyzer() if is_pylint else FeedbackAnalyzer()
     results_per_exercise_id = {}
 
@@ -119,9 +120,17 @@ def main_stacked_bars(exercise_ids: List[str], is_pylint: bool = False, load_dat
             with open(f'{ROOT_DIR}/output/stats/{stats_file}', 'wb') as save_file:
                 pickle.dump(results_per_exercise_id, save_file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    plot_global_accuracies_stacked_bar(results_per_exercise_id, file_name=f"plot{'_pylint' if is_pylint else ''}")
+    plot_global_accuracies_stacked_bar(results_per_exercise_id, file_name=f"{prefix}_plot{'_pylint' if is_pylint else ''}")
 
 
 if __name__ == '__main__':
+    multiprocessing.set_start_method('forkserver')
+
+    STATS_FILE = f"stacked_bars_global"
+    NAMES_MAP = DUTCH_EXERCISE_NAMES_MAP
+    N_PROCS = 8
+
+    prefix = "no_identifying"
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
-    main_stacked_bars(ids)
+
+    main_stacked_bars(ids, is_pylint=False)
