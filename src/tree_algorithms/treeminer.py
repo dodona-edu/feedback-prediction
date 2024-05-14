@@ -6,12 +6,13 @@ import multiprocessing
 from collections import defaultdict
 from typing import List, Set, Dict, Tuple
 
+from config import TREEMINER_MIN_SUPPORT
 from custom_types import HorizontalTree, ScopeElement, Scope
 from util import to_string_encoding
 
 
-def mine_patterns(subtrees: List[HorizontalTree], support=0.8) -> Tuple[Set[HorizontalTree], Set[str]]:
-    miner = Treeminerd(subtrees, support=support)
+def mine_patterns(subtrees: List[HorizontalTree]) -> Tuple[Set[HorizontalTree], Set[str]]:
+    miner = Treeminerd(subtrees, support=TREEMINER_MIN_SUPPORT)
     # TODO always early stopping
     if miner.early_stopping:
         p = multiprocessing.Process(target=miner.get_patterns)

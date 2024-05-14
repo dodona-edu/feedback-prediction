@@ -14,6 +14,7 @@ from pylint.reporters import JSONReporter
 from tqdm import tqdm
 from tree_sitter import Language, Parser, Node
 
+from config import USE_AST, RANDOM_SEED
 from custom_types import AnnotatedTree, AnnotationInstance, LineTree
 from constants import ROOT_DIR
 
@@ -35,16 +36,17 @@ class Analyzer(ABC):
         self.annotations_per_submission_per_line: Dict[str, Dict[int, Dict[int, str]]] = {}
 
     def map_tree(self, node: Node) -> LineTree:
-        children = [self.map_tree(child) for child in node.named_children]
+        child_nodes = node.named_children if USE_AST else node.children
+        children = [self.map_tree(child) for child in child_nodes]
         lines = sorted(set(range(node.start_point[0], node.end_point[0] + 1)))
-        if node.type in ["binary_operator", "boolean_operator", "comparison_operator", "augmented_assignment"]:
-            name = node.children[1].type
-        elif node.type == "unary_operator":
-            name = node.children[0].type
-        elif node.type in ["identifier", "string", "integer"]:
+        if node.type in ["identifier", "string", "integer"]:
             name = node.text.decode("utf-8")
             if node.type == "string":
                 name = f"'{name[1:-1]}'"
+        elif USE_AST and node.type in ["binary_operator", "boolean_operator", "comparison_operator", "augmented_assignment"]:
+            name = node.children[1].type
+        elif USE_AST and node.type == "unary_operator":
+            name = node.children[0].type
         else:
             name = node.type
         return {"name": name, "lines": lines, "children": children}
@@ -75,7 +77,8 @@ class Analyzer(ABC):
         return result
 
     def create_train_test_set(self) -> Tuple[Dict[str, AnnotatedTree], Dict[str, AnnotatedTree]]:
-        random.seed(314159)
+        if RANDOM_SEED is not None:
+            random.seed(RANDOM_SEED)
         files = self.files[:]
 
         random.shuffle(files)

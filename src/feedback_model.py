@@ -5,6 +5,7 @@ from typing import List, Dict, Tuple
 
 from pqdm.processes import pqdm
 
+from config import USE_IDENTIFYING_NODES, MIN_PATTERN_SUBTREES, MAX_IDENTIFYING_SUBTREES
 from constants import ROOT_DIR
 from custom_types import AnnotatedTree, Tree, HorizontalTree, PatternCollection
 from util import to_string_encoding
@@ -50,11 +51,12 @@ class FeedbackModel:
         frequent_nodes = set()
         node_set = set()
 
-        if len(subtrees) >= 3:
+        if len(subtrees) >= MIN_PATTERN_SUBTREES:
             annotation_patterns, frequent_nodes = mine_patterns(subtrees)
 
-        for subtree in subtrees:
-            node_set.update(subtree)
+        if USE_IDENTIFYING_NODES:
+            for subtree in subtrees:
+                node_set.update(subtree)
 
         return annotation_id, (annotation_patterns, frequent_nodes, node_set)
 
@@ -75,7 +77,7 @@ class FeedbackModel:
         for _, (_, _, nodes) in results:
             for node in nodes:
                 node_counts[node] += 1
-        nodes_to_remove = {n for n, c in node_counts.items() if c > 3}
+        nodes_to_remove = {n for n, c in node_counts.items() if c > MAX_IDENTIFYING_SUBTREES}
 
         for a_id, (pattern_set, frequent_nodes, node_set) in results:
             identifying_nodes = node_set.difference(nodes_to_remove)
