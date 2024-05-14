@@ -72,12 +72,12 @@ def visualise_string_subtree(graph: pydot.Dot, tree: HorizontalTree) -> None:
             parent_ids.pop()
 
 
-def get_dataset_stats():
+def get_dataset_stats(print_annotations=False):
     ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
 
     for e_id in ids:
         analyzer = FeedbackAnalyzer()
-        analyzer.set_files(glob(f'{ROOT_DIR}/data/exercises/{e_id}/*.py'))
+        analyzer.set_files(glob(f'{ROOT_DIR}/data/exercises/{e_id}/*.py'), annotations_only=False)
         test = analyzer.analyze_files()
 
         annotation_ids = set()
@@ -106,6 +106,10 @@ def get_dataset_stats():
         print(f"min instances/annotation: {min(annotation_instances_counter.values())}")
         print(f"max instances/annotation: {max(annotation_instances_counter.values())}")
         print(f"average instances/annotation: {annotation_instances_counter.total() / len(annotation_instances_counter)}")
+        if print_annotations:
+            print("Annotations: ")
+            for a_id in annotation_ids:
+                print(f"{a_id}: {analyzer.id_annotation_map[a_id]}")
         print()
 
 

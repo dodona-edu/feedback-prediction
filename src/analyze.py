@@ -169,8 +169,8 @@ class FeedbackAnalyzer(Analyzer):
         submission_id = file.split('/')[-1].split('.')[0]
         return list(map(lambda x: x[0:2], self.submission_annotations_map[submission_id]))
 
-    def set_files(self, files) -> None:
-        self.files = [file for file in files if file.split('/')[-1].split('.')[0] in self.submission_annotations_map.keys()]
+    def set_files(self, files, annotations_only=True) -> None:
+        self.files = [file for file in files if not annotations_only or file.split('/')[-1].split('.')[0] in self.submission_annotations_map.keys()]
 
     def get_sorted_files(self) -> List[str]:
         return sorted(self.files, key=lambda i: self.submission_annotations_map[i.split('/')[-1].split('.')[0]][0][2])
