@@ -158,3 +158,24 @@ class FeedbackModel:
             else:
                 matching_scores[a_id] = 0
         return matching_scores
+
+
+class DummyModel(FeedbackModel):
+    """
+    This heuristic model gives a score to all annotations based on how frequently they occur.
+    It does not use the given context and just returns this static score when asked to calculate the scores.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.annotation_scores = {}
+
+    def train(self, training: Dict[str, AnnotatedTree], n_procs=8, thresholds=False) -> None:
+        self.annotation_scores.clear()
+        annotation_subtrees = self.get_annotation_subtrees(training)
+        for a_id, subtrees in annotation_subtrees.items():
+            self.annotation_scores[a_id] = len(subtrees)
+            self.patterns[a_id] = ()
+
+    def calculate_matching_scores(self, subtree: Tree, use_negatives=False) -> Dict[int, float]:
+        return self.annotation_scores
