@@ -35,9 +35,15 @@ def visualise_parse_tree(tree: Tree | HorizontalTree, is_string_encoding=False, 
     Create a dot file of the parse tree that can be visualised by Graphviz
     The dot file can be turned into e.g. a png using:
     dot -Tpng tree.dot -o tree.png
+    If you want to add and position xlabels (external labels):
+    1. Create the dot file by running this function
+    2. Manually add/edit xlabels where wanted
+    3. Run 'dot -Tdot file_name.dot > dot_file.dot'
+    4. Manually edit the xlp attributes of the nodes that have an xlabel
+    5. Run neato -n -Tpng dot_file.dot > tree.png
     """
     graph = pydot.Dot("tree", graph_type="graph")
-    graph.set_splines(False)
+    graph.set_splines(True)  # ortho for orthogonal lines, True for curvy/non overlapping lines
     if is_string_encoding:
         visualise_string_subtree(graph, tree)
     else:
@@ -48,8 +54,8 @@ def visualise_parse_tree(tree: Tree | HorizontalTree, is_string_encoding=False, 
 
 
 def visualise_subtree(graph: pydot.Dot, tree: Tree, next_node_id: List[int]) -> pydot.Node:
-    label = f"'{tree['name']}'"
-    node = pydot.Node(next_node_id[0], label=label)
+    label = f"{tree['name']}"
+    node = pydot.Node(next_node_id[0], label=label, xlabel=f"n<SUB>{next_node_id[0]}</SUB>")
     next_node_id[0] += 1
     graph.add_node(node)
     for child in tree['children']:
