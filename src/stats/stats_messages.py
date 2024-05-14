@@ -65,7 +65,7 @@ def plot_accuracies_for_annotations(analyzer: Analyzer, annotations: List[str], 
         return result
 
     percentages_per_annotation = [(a_id, calculate_percentages(a_id)) for a_id in annotation_ids]
-    percentages_per_annotation.sort(key=lambda x: x[1])
+    percentages_per_annotation.sort(key=lambda x: (sum(x[1][:-1]), x[1]))
 
     def get_percentages(pos):
         return list(map(lambda x: x[1][pos], percentages_per_annotation))
