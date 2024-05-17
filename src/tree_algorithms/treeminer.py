@@ -112,15 +112,16 @@ class Treeminerd(MinerAlgorithm):
         for x, i, scope_lists_x in clazz:
             subclass = []
             for y, j, scope_lists_y in clazz:
-                if i == j:
-                    scope_list = self.in_scope_test(
-                        x, i, scope_lists_x, y, j, scope_lists_y
-                    )
+                if i >= j:
+                    if i == j:
+                        scope_list = self.in_scope_test(
+                            x, i, scope_lists_x, y, j, scope_lists_y
+                        )
+                        if len(scope_list) / self.tree_count >= self.support:
+                            subclass.append((y, j + 1, scope_list))
+                    scope_list = self.out_scope_test(x, i, scope_lists_x, y, j, scope_lists_y)
                     if len(scope_list) / self.tree_count >= self.support:
-                        subclass.append((y, j + 1, scope_list))
-                scope_list = self.out_scope_test(x, i, scope_lists_x, y, j, scope_lists_y)
-                if len(scope_list) / self.tree_count >= self.support:
-                    subclass.append((y, j, scope_list))
+                        subclass.append((y, j, scope_list))
             self.enumerate_frequent_subtrees(
                 prefix
                 + (-1,) * (prefix_size - (2 * prefix.count(-1)) - i - 1)
