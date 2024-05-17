@@ -1,11 +1,11 @@
-# If True, AST's are used. If False concrete parse trees are used.
+# If True, AST's are used. If False concrete syntax trees (CST's) are used.
 USE_AST = True
 
 # The minimum support value that TreeMiner should use to determine if an embedded subtree is a pattern.
 TREEMINER_MIN_SUPPORT = 0.7
 
 # If True, identifying nodes are used on top of patterns to improve predictions.
-USE_IDENTIFYING_NODES = False
+USE_IDENTIFYING_NODES = True
 
 # The minimum amount of subtrees needed before starting to search for TreeMiner patterns.
 MIN_PATTERN_SUBTREES = 3
