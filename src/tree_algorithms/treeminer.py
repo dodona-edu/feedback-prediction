@@ -43,13 +43,13 @@ class MinerAlgorithm:
         self.result = manager.list()
 
         self.tree_count = len(database)
-        atom_occurences = defaultdict(int)
+        atom_occurrences = defaultdict(int)
         for tree in self.database:
             for elem in set(tree):
                 if elem != -1:
-                    atom_occurences[elem] += 1
+                    atom_occurrences[elem] += 1
         self.f_1 = sorted(
-            k for k, v in atom_occurences.items() if v / self.tree_count >= support
+            k for k, v in atom_occurrences.items() if v / self.tree_count >= support
         )
         self.label2id = {el: i for i, el in enumerate(self.f_1)}
         self.support = support
