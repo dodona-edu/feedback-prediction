@@ -15,3 +15,10 @@ MAX_IDENTIFYING_SUBTREES = 3
 
 # The random seed used to create a train-test split, or None for no seed.
 RANDOM_SEED = 314159
+
+
+# Weight of newly calculated score threshold, the weight of the old score is equal to (1 - ALPHA)
+ALPHA = 0.2
+
+# Discount factor for updating the score thresholds
+GAMMA = 0.95

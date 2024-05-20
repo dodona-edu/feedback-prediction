@@ -1,11 +1,12 @@
 import datetime
 import pickle
+import numpy as np
 from collections import defaultdict
 from typing import List, Dict, Tuple, Set
 
 from pqdm.processes import pqdm
 
-from config import USE_IDENTIFYING_NODES, MIN_PATTERN_SUBTREES, MAX_IDENTIFYING_SUBTREES
+from config import USE_IDENTIFYING_NODES, MIN_PATTERN_SUBTREES, MAX_IDENTIFYING_SUBTREES, GAMMA, ALPHA
 from constants import ROOT_DIR
 from custom_types import AnnotatedTree, Tree, HorizontalTree, PatternCollection
 from util import to_string_encoding
@@ -113,7 +114,7 @@ class FeedbackModel:
         matching_scores = []
         for subtree in subtrees:
             matching_scores.append(self.calculate_matching_score(a_id, subtree))
-        score_threshold = 0.95 * (min(matching_scores) + max(matching_scores)) / 2
+        score_threshold = np.mean(matching_scores) - np.std(matching_scores)
 
         return a_id, score_threshold
 
@@ -127,15 +128,12 @@ class FeedbackModel:
 
         for a_id, score_threshold in score_thresholds:
             if a_id in self.score_thresholds:
-                self.score_thresholds[a_id] = 0.2 * score_threshold + 0.8 * self.score_thresholds[a_id]
+                self.score_thresholds[a_id] = ALPHA * score_threshold + (1 - ALPHA) * self.score_thresholds[a_id]
             else:
                 self.score_thresholds[a_id] = score_threshold
 
     def update_score_threshold(self, annotation_id: int, score: float) -> None:
-        if score > 0.2 * self.score_thresholds[annotation_id]:
-            self.score_thresholds[annotation_id] = score * 0.95
-        else:
-            self.score_thresholds[annotation_id] = self.score_thresholds[annotation_id] * 0.8 + score * 0.2 * 0.95
+        self.score_thresholds[annotation_id] = score * GAMMA
 
     def update_negatives(self, annotation_id: int, subtree: Tree) -> None:
         negative_nodes = self.negative_nodes.setdefault(annotation_id, set())

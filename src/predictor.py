@@ -77,8 +77,7 @@ class Predictor:
             # If the annotation was not predicted because it's threshold was too high, update the threshold
             if a_id not in predicted_annotations_per_line[line]:
                 matching_scores = matching_scores_per_line_per_annotation[line]
-                if a_id in matching_scores:
-                    # print(f"Matching score {message}: {matching_scores[message]}")
+                if a_id in matching_scores and matching_scores[a_id] < self.model.score_thresholds[a_id]:
                     self.model.update_score_threshold(a_id, matching_scores[a_id])
 
         for a_id, count in annotation_occurrences_in_this_file.items():
