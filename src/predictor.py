@@ -6,12 +6,11 @@ from collections import Counter, defaultdict
 from glob import glob
 from typing import List, Tuple, Dict, Set
 
-from pqdm.processes import pqdm
 import multiprocessing.pool
 
 from analyze import FeedbackAnalyzer
 from constants import ROOT_DIR
-from custom_types import LineTree, AnnotationInstance, AnnotatedTree, Tree
+from custom_types import LineTree, AnnotationInstance, AnnotatedTree
 from feedback_model import FeedbackModel
 from tree_algorithms.subtree_on_line import find_subtree_on_line
 
@@ -31,17 +30,16 @@ class Predictor:
 
         return line, None
 
-    def predict(self, tree: LineTree) -> Tuple[Dict[int, Set[int]], Dict[int, Dict[int, float]], List[int]]:
+    def predict(self, tree: LineTree, n_procs=8) -> Tuple[Dict[int, Set[int]], Dict[int, Dict[int, float]], List[int]]:
         # Keep track of which lines had a subtree on them, only used for calculating statistics
         lines_with_subtree = []
 
         matching_scores_per_line_per_annotation = defaultdict(dict)
         scores_and_lines_per_annotation = defaultdict(list)
 
-        pool = multiprocessing.pool.Pool(8)
-        results = pool.starmap(self._calculate_matching_scores, [(line, tree) for line in tree['lines']], chunksize=math.ceil(len(tree['lines']) / 8))
+        pool = multiprocessing.pool.Pool(n_procs)
+        results = pool.starmap(self._calculate_matching_scores, [(line, tree) for line in tree['lines']], chunksize=math.ceil(len(tree['lines']) / n_procs))
         pool.close()
-        # results = pqdm([(line, tree) for line in tree['lines']], self._calculate_matching_scores, n_jobs=1, argument_type='args', exception_behaviour='immediate')
 
         for line, matching_scores in results:
             if matching_scores is not None:
@@ -96,37 +94,8 @@ class Predictor:
             self.model.train(self.train, n_procs=8, thresholds=True)
 
 
-def calculate_statistics(result: List[Tuple[int, List[int], List[int]]], lines_with_subtree: List[int],
-                         stats: Counter, predictor: Predictor, seen_annotations: Set[int]):
-    annotations_in_file = Counter()
-
-    non_empty_lines = [line for line, _, _ in result]
-    stats["TN"] += len(list(filter(lambda line: line not in non_empty_lines, lines_with_subtree)))
-
-    for line, annotations, predicted_annotations in result:
-        if annotations:
-            annotations_in_file.update(annotations)
-
-        correct_annotations = set(predicted_annotations).intersection(annotations)
-        wrong_annotations = set(predicted_annotations).difference(annotations)
-        unpredicted_annotations = set(annotations).difference(predicted_annotations)
-
-        stats["TP"] += len(correct_annotations)
-
-        if wrong_annotations:
-            stats["FP"] += len(wrong_annotations)
-        elif unpredicted_annotations:
-            for a_id in unpredicted_annotations:
-                if a_id in seen_annotations:
-                    stats["FN"] += 1
-                    if a_id in predictor.model.patterns:
-                        stats["filtered_FN"] += 1
-
-    seen_annotations.update(annotations_in_file.keys())
-
-
 def save_results(results: List[Tuple[str, List[Tuple[int, List[Tuple[int, str]], List[Tuple[int, str]]]]]], e_id: str):
-    with open(f'{ROOT_DIR}/output/predictor/{e_id}.csv', 'w') as csv_file:
+    with open(f'{ROOT_DIR}/output/predictor/test/{prefix}_{e_id}.csv', 'w') as csv_file:
         writer = csv.writer(csv_file, delimiter='|')
         for file, line_results in results:
             file_parts = file.split('/')
@@ -135,14 +104,11 @@ def save_results(results: List[Tuple[str, List[Tuple[int, List[Tuple[int, str]],
 
 
 def test_simulate(exercise_id: str):
-    stats = Counter({"FP": 0, "FN": 0, "TP": 0, "TN": 0, "filtered_FN": 0, "different_message": 0})
-
     analyzer = FeedbackAnalyzer()
-    analyzer.set_files(glob(f'{ROOT_DIR}/data/exercises/{exercise_id}/*.py'))
+    analyzer.set_files(glob(f'{ROOT_DIR}/data/exercises/{exercise_id}/*.py'))  # TODO include files without annotations
 
     results = []
 
-    seen_annotations = set()
     predictor = Predictor()
 
     test = analyzer.analyze_files()
@@ -183,21 +149,18 @@ def test_simulate(exercise_id: str):
 
         predictor.update_train(file, annotated_tree)
 
-        print()
-        # print(f"Current score thresholds: {predictor.model.score_thresholds}")
-        # print()
-
     save_results(results, exercise_id)
-
-    print(stats)
-    print(f'False positive rate: {stats["FP"] / (stats["FP"] + stats["TN"])}')
-    print(f'True positive rate: {stats["TP"] / (stats["TP"] + stats["FN"])}')
-    print(f'Filtered true positive rate: {stats["TP"] / (stats["TP"] + stats["filtered_FN"])}')
 
 
 if __name__ == '__main__':
-    start = time.time()
-    test_simulate("505886137")
-    print()
-    print(f"Total time: {time.time() - start}")
+    multiprocessing.set_start_method('forkserver')
 
+    prefix = 'negatives'
+
+    ids = ['505886137', '933265977', '1730686412', '1875043169', '2046492002', '2146239081']
+
+    for eid in ids:
+        print(f"Exercise {eid}")
+        start = time.time()
+        test_simulate(eid)
+        print(f"Total time: {time.time() - start}")

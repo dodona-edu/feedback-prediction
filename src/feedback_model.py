@@ -98,7 +98,6 @@ class FeedbackModel:
                 pattern_weights[pattern] += 1
 
         for pattern in pattern_weights.keys():
-            # pattern_scores[pattern] = len(pattern) / math.log10(len(pattern_weights) / pattern_scores[pattern])
             pattern_weights[pattern] = len(pattern) / pattern_weights[pattern]
 
         self.patterns = patterns
@@ -156,10 +155,10 @@ class FeedbackModel:
             matches_score = sum(self.pattern_weights[match] for match in matches) / len(pattern_set)
 
         node_set = self.patterns[annotation_id][2]
-        nodes = set(subtree).intersection(node_set)
+        matching_nodes = set(subtree).intersection(node_set)
         nodes_score = 0
         if node_set:
-            nodes_score = len(nodes)
+            nodes_score = len(matching_nodes)
 
         return matches_score + nodes_score
 
