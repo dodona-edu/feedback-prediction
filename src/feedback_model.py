@@ -1,7 +1,7 @@
 import datetime
 import pickle
 from collections import defaultdict
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Set
 
 from pqdm.processes import pqdm
 
@@ -19,8 +19,11 @@ class FeedbackModel:
 
     def __init__(self):
         self.patterns: Dict[int, PatternCollection] = {}
+        # Contains, for each annotation, a list of subtrees and a set of all nodes in those subtrees
+        self.annotation_subtrees: Dict[int, Tuple[List[HorizontalTree], Set[str]]] = {}
         self.pattern_weights = {}
         self.score_thresholds = {}
+        self.negative_nodes: Dict[int, Set[str]] = {}
 
     def load_model(self, model_file: str) -> None:
         print("Loading patterns data")
@@ -80,9 +83,12 @@ class FeedbackModel:
         nodes_to_remove = {n for n, c in node_counts.items() if c > MAX_IDENTIFYING_SUBTREES}
 
         for a_id, (pattern_set, frequent_nodes, node_set) in results:
+            self.annotation_subtrees[a_id] = (annotation_subtrees[a_id], node_set)
             identifying_nodes = node_set.difference(nodes_to_remove)
             if pattern_set or identifying_nodes:
                 patterns[a_id] = (pattern_set, frequent_nodes, identifying_nodes)
+            if a_id in self.negative_nodes:
+                self.negative_nodes[a_id].difference_update(node_set)
 
         print("Calculating pattern weights")
         pattern_weights = defaultdict(float)
@@ -131,7 +137,20 @@ class FeedbackModel:
         else:
             self.score_thresholds[annotation_id] = self.score_thresholds[annotation_id] * 0.8 + score * 0.2 * 0.95
 
+    def update_negatives(self, annotation_id: int, subtree: Tree) -> None:
+        negative_nodes = self.negative_nodes.setdefault(annotation_id, set())
+        horizontal_subtree = list(to_string_encoding(subtree))
+
+        negative_nodes.update(horizontal_subtree)
+        positive_nodes = self.annotation_subtrees[annotation_id][1]
+        negative_nodes.difference_update(positive_nodes)
+
     def calculate_matching_score(self, annotation_id: int, subtree: HorizontalTree, use_negatives=False) -> float:
+        subtree_nodes = set(subtree)
+        if use_negatives:
+            if annotation_id in self.negative_nodes and subtree_nodes.intersection(self.negative_nodes[annotation_id]):
+                return 0
+
         pattern_set = self.patterns[annotation_id][0]
         matches = list(filter(lambda pattern: subtree_matches(subtree, pattern), pattern_set))
         matches_score = 0
@@ -154,7 +173,7 @@ class FeedbackModel:
         matching_scores = {}
         for a_id, (_, frequent_nodes, identifying_nodes) in self.patterns.items() :
             if nodes.intersection(identifying_nodes) or nodes.intersection(frequent_nodes):
-                matching_scores[a_id] = self.calculate_matching_score(a_id, horizontal_subtree)
+                matching_scores[a_id] = self.calculate_matching_score(a_id, horizontal_subtree, use_negatives=use_negatives)
             else:
                 matching_scores[a_id] = 0
         return matching_scores

@@ -27,7 +27,7 @@ class Predictor:
     def _calculate_matching_scores(self, line, tree):
         subtree = find_subtree_on_line(tree, line)
         if subtree is not None:
-            return line, self.model.calculate_matching_scores(subtree, identifying_only=True)
+            return line, self.model.calculate_matching_scores(subtree, use_negatives=True)
 
         return line, None
 
@@ -60,9 +60,11 @@ class Predictor:
 
         return predicted_annotations_per_line, matching_scores_per_line_per_annotation, lines_with_subtree
 
-    def reject_suggestion(self, suggestion: AnnotationInstance, subtree: Tree):
-        # TODO negative patterns
-        pass
+    def reject_suggestion(self, suggestion: AnnotationInstance, tree: LineTree):
+        print(f"Rejection of suggestion: {suggestion}")
+        annotation_id, line = suggestion
+        subtree = find_subtree_on_line(tree, line)
+        self.model.update_negatives(annotation_id, subtree)
 
     def process_actual_feedback(self, annotation_instances: List[AnnotationInstance], predicted_annotations_per_line: Dict[int, Set[int]],
                                 matching_scores_per_line_per_annotation: Dict[int, Dict[int, float]]) -> Dict[int, Set[int]]:
@@ -173,7 +175,10 @@ def test_simulate(exercise_id: str):
                 result.append((line, annotations, list(predictions)))
             result_with_string.append((line, annotations_with_string, predictions_with_string))
 
-        calculate_statistics(result, lines_with_subtree, stats, predictor, seen_annotations)
+            # Reject wrong predictions:
+            wrong_predictions = predictions.difference(annotations)
+            for a_id in wrong_predictions:
+                predictor.reject_suggestion((a_id, line), annotated_tree[0])
 
         results.append((file, result_with_string))
 
